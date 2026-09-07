@@ -2,7 +2,7 @@
 <html lang="zh">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>云笔记 - <?php echo htmlspecialchars($id); ?></title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
@@ -439,6 +439,216 @@
             font-weight: 500;
             color: var(--light);
         }
+
+        /* ========== UI 升级（与首页统一的玻璃拟态风格） ========== */
+        :root {
+            --primary: #4a6bfa;
+            --secondary: #6c63ff;
+            --accent: #22d3ee;
+            --dark: #12141f;
+            --darker: #171a29;
+            --light: #f0f2f5;
+            --gray: #8b93a7;
+            --card-border: rgba(255, 255, 255, 0.08);
+        }
+
+        body {
+            background-color: var(--dark);
+        }
+
+        /* 背景光晕升级 */
+        .shape { opacity: 0.13; filter: blur(70px); }
+        .shape-3 {
+            background: var(--accent);
+            width: 340px;
+            height: 340px;
+            top: 42%;
+            left: 46%;
+            opacity: 0.06;
+            border-radius: 50%;
+            animation: float 14s ease-in-out infinite alternate;
+        }
+
+        /* 顶部导航分隔线 */
+        .header {
+            padding-bottom: 18px;
+            border-bottom: 1px solid var(--card-border);
+        }
+
+        /* 笔记本标题做成徽章 */
+        .notebook-title {
+            font-size: 1em !important;
+            font-weight: 600 !important;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 7px 14px;
+            border-radius: 100px;
+            background: rgba(74, 107, 250, 0.12);
+            border: 1px solid rgba(74, 107, 250, 0.3);
+            color: #a5b4fc !important;
+            max-width: 260px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .notebook-title::before {
+            content: '\f02d'; /* fa-book */
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            color: var(--accent);
+            font-size: 0.9em;
+        }
+
+        .back-link {
+            border: 1px solid var(--card-border);
+        }
+        .back-link:hover {
+            color: white;
+            background: rgba(74, 107, 250, 0.15);
+            border-color: rgba(74, 107, 250, 0.4);
+        }
+
+        /* 密码页卡片：玻璃拟态 + 渐变描边 */
+        .password-section.card {
+            position: relative;
+            background: var(--card-bg, rgba(255, 255, 255, 0.04));
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            overflow: hidden;
+            max-width: 480px;
+            margin: 8vh auto 30px;
+        }
+        .password-section.card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 20px;
+            padding: 1px;
+            background: linear-gradient(135deg, rgba(74, 107, 250, 0.5), transparent 40%, transparent 60%, rgba(108, 99, 255, 0.4));
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            pointer-events: none;
+        }
+        .password-section .card-title {
+            font-size: 1.6em;
+            background: linear-gradient(90deg, #ffffff, #a5b4fc);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        /* 工具栏：玻璃拟态 + 描边 */
+        .editor-header {
+            background: rgba(255, 255, 255, 0.04) !important;
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--card-border);
+            /* 建立高层级层叠上下文，确保设置下拉菜单浮在编辑器内容之上 */
+            position: relative;
+            z-index: 100;
+        }
+
+        /* 设置下拉菜单再拔高一层，避免被绝对定位的编辑器内容遮挡 */
+        .settings-dropdown { position: relative; z-index: 101; }
+        .settings-content { z-index: 1001 !important; }
+
+        /* 编辑器主体外框描边（压到工具栏下层） */
+        .editor-main {
+            border: 1px solid var(--card-border);
+            position: relative;
+            z-index: 1;
+        }
+
+        /* 编辑器页需要更宽的工作区：覆盖 app.css 的 80% 与 main.js 注入的 1500px */
+        .container {
+            max-width: 1500px !important;
+            width: auto !important;
+            padding: 26px 24px;
+        }
+
+        /* 移动端适配 */
+        @media (max-width: 768px) {
+            .container {
+                max-width: 100% !important;
+                width: 100% !important;
+                padding: 14px 12px;
+                padding-left: max(12px, env(safe-area-inset-left));
+                padding-right: max(12px, env(safe-area-inset-right));
+            }
+            /* 手机上编辑区/预览区内容更贴边（覆盖内联 padding:20px） */
+            #editor, #preview {
+                padding: 14px !important;
+            }
+
+            /* ===== 手机端编辑器布局重排：上下堆叠 + 两栏都满宽 =====
+               原布局用 table + table-layout:fixed + 预览区 absolute，
+               手机上 td 变 block 后列宽计算错误导致预览区不满宽，这里彻底重排 */
+            .editor-section, .editor-container {
+                height: auto !important;
+                min-height: 0 !important;
+            }
+            .editor-main {
+                height: auto !important;
+                display: block !important;
+            }
+            .editor-main table,
+            .editor-main tbody,
+            .editor-main tr {
+                display: block !important;
+                width: 100% !important;
+                table-layout: auto !important;
+                height: auto !important;
+            }
+            .editor-main td {
+                display: block !important;
+                width: 100% !important;
+                box-sizing: border-box !important;
+                position: relative !important;
+                height: 46vh !important;
+                border-right: none !important;
+            }
+            .editor-main td:first-child {
+                border-bottom: 1px solid var(--card-border) !important;
+            }
+            /* 编辑区包裹 div 撑满 */
+            .editor-main td > div {
+                height: 100% !important;
+                width: 100% !important;
+            }
+            /* 编辑区与预览区绝对定位撑满各自 td（left/right:0 保证满宽） */
+            #editor, #preview {
+                position: absolute !important;
+                top: 0 !important;
+                left: 0 !important;
+                right: 0 !important;
+                bottom: 0 !important;
+                width: auto !important;
+                height: auto !important;
+                box-sizing: border-box !important;
+            }
+            .header {
+                flex-direction: column;
+                align-items: center;
+                gap: 14px;
+            }
+            .left-section {
+                flex-direction: column;
+                align-items: center;
+                gap: 10px;
+            }
+            /* 覆盖 main.js 注入的 logo 固定宽度，使其内容居中 */
+            .logo {
+                width: auto !important;
+                justify-content: center;
+            }
+            .nav-links { flex-wrap: wrap; justify-content: center; }
+            .notebook-title { max-width: 80vw; }
+            .password-section.card { padding: 28px 22px; margin-top: 4vh; }
+        }
     </style>
     
     <!-- Markdown和高亮库 -->
@@ -452,6 +662,7 @@
     <div class="background">
         <div class="shape shape-1"></div>
         <div class="shape shape-2"></div>
+        <div class="shape shape-3"></div>
     </div>
 
     <div class="container">
@@ -556,7 +767,7 @@
                     </div>
                 </div>
                 <div class="editor-main">
-                    <table style="width:100%; height:100%; border-collapse:collapse; table-layout:fixed; background:#1c2033; border-radius:10px;">
+                    <table style="width:100%; height:100%; border-collapse:collapse; table-layout:fixed; background:rgba(255,255,255,0.03); border-radius:12px;">
                         <tr>
                             <td style="width:50%; padding:0; vertical-align:top; border-right:1px solid rgba(255, 255, 255, 0.1);">
                                 <div style="height:100%; position:relative;">

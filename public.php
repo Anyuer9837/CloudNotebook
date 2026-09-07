@@ -34,7 +34,7 @@ $content = $db->getNotebookContent($id);
 <html lang="zh">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title><?php echo htmlspecialchars($id); ?> - 云笔记</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="css/app.css">
@@ -58,30 +58,40 @@ $content = $db->getNotebookContent($id);
             --primary: #4a6bfa;
             --primary-dark: #3a56d4;
             --secondary: #6c63ff;
-            --dark: #1a1e2e;
-            --darker: #151824;
+            --accent: #22d3ee;
+            --dark: #12141f;
+            --darker: #171a29;
+            --card-bg: rgba(255, 255, 255, 0.04);
+            --card-border: rgba(255, 255, 255, 0.08);
             --light: #f0f2f5;
-            --gray: #6e7888;
+            --gray: #8b93a7;
             --success: #10b981;
             --danger: #ef4444;
-            --border-radius: 12px;
-            --card-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-            --card-shadow-hover: 0 15px 50px rgba(0, 0, 0, 0.2);
-            --transition: all 0.3s ease;
+            --border-radius: 16px;
+            --card-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
+            --card-shadow-hover: 0 20px 60px rgba(74, 107, 250, 0.25);
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
+        * { box-sizing: border-box; }
+
         body {
-            background-color: #0f1117;
-            color: #f0f2f5;
+            background-color: var(--dark);
+            color: var(--light);
             margin: 0;
             font-family: "SF Pro Display", "SF Pro Icons", "Helvetica Neue", "Microsoft YaHei", "Segoe UI", sans-serif;
             min-height: 100vh;
+            line-height: 1.6;
+            overflow-x: hidden;
         }
 
+        /* 阅读页固定舒适宽度，!important 防止 main.js 把它拉成 1500px */
         .container {
-            max-width: 80% !important;
+            max-width: 900px !important;
             margin: 0 auto;
             padding: 30px 20px;
+            padding-left: max(20px, env(safe-area-inset-left));
+            padding-right: max(20px, env(safe-area-inset-right));
             position: relative;
             z-index: 1;
             height: auto;
@@ -91,9 +101,11 @@ $content = $db->getNotebookContent($id);
             display: flex;
             justify-content: space-between;
             align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
             margin-bottom: 30px;
-            padding: 20px 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 18px 0;
+            border-bottom: 1px solid var(--card-border);
         }
 
         .logo {
@@ -114,60 +126,117 @@ $content = $db->getNotebookContent($id);
             color: transparent;
         }
         .logo i {
-            color: white;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            width: 42px;
+            height: 42px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            font-size: 0.9em;
+            box-shadow: 0 6px 18px rgba(74, 107, 250, 0.4);
         }
 
-        .back-link {
-            color: #6e7888;
-            text-decoration: none;
-            display: flex;
+        /* 笔记本标题徽章 */
+        .note-badge {
+            display: inline-flex;
             align-items: center;
             gap: 8px;
-            font-size: 16px;
-            transition: color 0.3s;
-            padding: 8px 16px;
-            border-radius: 8px;
+            padding: 6px 14px;
+            border-radius: 100px;
+            background: rgba(74, 107, 250, 0.12);
+            border: 1px solid rgba(74, 107, 250, 0.3);
+            color: #a5b4fc;
+            font-size: 0.85em;
+            font-weight: 600;
+            max-width: 100%;
+            overflow: hidden;
+        }
+        .note-badge span {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .note-badge i { color: var(--accent); flex-shrink: 0; }
+
+        .back-link {
+            color: var(--gray);
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            transition: var(--transition);
+            padding: 9px 16px;
+            border-radius: 10px;
+            border: 1px solid var(--card-border);
+            flex-shrink: 0;
         }
 
         .back-link:hover {
-            color: #4a6bfa;
-            background: rgba(74, 107, 250, 0.1);
+            color: white;
+            background: rgba(74, 107, 250, 0.15);
+            border-color: rgba(74, 107, 250, 0.4);
         }
 
+        /* 玻璃拟态内容卡片 */
         .content-card {
-            background: #1c2033;
-            border-radius: 10px;
-            padding: 30px;
+            position: relative;
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            padding: 40px;
             margin-bottom: 30px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            min-height: calc(100vh - 200px);
+            box-shadow: var(--card-shadow);
+            min-height: calc(100vh - 220px);
+            overflow: hidden; /* 关键：约束子内容，防止超框 */
+        }
+
+        .content-card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 20px;
+            padding: 1px;
+            background: linear-gradient(135deg, rgba(74, 107, 250, 0.4), transparent 40%, transparent 60%, rgba(108, 99, 255, 0.3));
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            pointer-events: none;
         }
 
         .markdown-content {
-            color: #f0f2f5;
+            color: var(--light);
             font-size: 16px;
-            line-height: 1.7;
-            padding: 20px;
+            line-height: 1.8;
+            /* 关键：长单词/长 URL 自动换行，杜绝横向超框 */
+            overflow-wrap: break-word;
+            word-wrap: break-word;
+            word-break: break-word;
         }
 
         .markdown-content h1 {
-            font-size: 28px;
-            color: #f0f2f5;
+            font-size: 30px;
+            font-weight: 800;
+            color: #ffffff;
             margin: 0 0 24px 0;
-            padding-bottom: 12px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 14px;
+            border-bottom: 1px solid var(--card-border);
         }
 
         .markdown-content h2 {
             font-size: 24px;
-            color: #f0f2f5;
-            margin: 32px 0 16px;
+            color: #ffffff;
+            margin: 34px 0 16px;
         }
 
         .markdown-content h3 {
             font-size: 20px;
-            color: #f0f2f5;
-            margin: 24px 0 16px;
+            color: #ffffff;
+            margin: 24px 0 14px;
         }
 
         .markdown-content p {
@@ -175,34 +244,52 @@ $content = $db->getNotebookContent($id);
             color: #c9d1d9;
         }
 
+        .markdown-content a {
+            color: #7c93ff;
+            text-decoration: none;
+            border-bottom: 1px solid rgba(124, 147, 255, 0.35);
+            transition: var(--transition);
+        }
+        .markdown-content a:hover {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+        }
+
         .markdown-content pre {
-            background: #282c34;
-            padding: 16px;
-            border-radius: 6px;
-            overflow-x: auto;
-            margin: 16px 0;
+            background: #0d1017;
+            border: 1px solid var(--card-border);
+            padding: 18px;
+            border-radius: 12px;
+            overflow-x: auto; /* 代码块横向滚动而非撑破 */
+            margin: 18px 0;
+            max-width: 100%;
         }
 
         .markdown-content code {
             font-family: 'SF Mono', Consolas, Monaco, monospace;
             font-size: 14px;
             color: #e6e6e6;
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.08);
             padding: 2px 6px;
-            border-radius: 4px;
+            border-radius: 5px;
+            overflow-wrap: break-word;
+            word-break: break-word;
         }
 
         .markdown-content pre code {
             background: transparent;
             padding: 0;
             color: #e6e6e6;
+            white-space: pre;
+            word-break: normal;
         }
 
         .markdown-content blockquote {
-            border-left: 4px solid #4a6bfa;
-            margin: 16px 0;
-            padding: 8px 16px;
+            border-left: 4px solid var(--primary);
+            margin: 18px 0;
+            padding: 10px 18px;
             background: rgba(74, 107, 250, 0.1);
+            border-radius: 0 10px 10px 0;
             color: #c9d1d9;
         }
 
@@ -220,37 +307,45 @@ $content = $db->getNotebookContent($id);
         .markdown-content img {
             max-width: 100%;
             height: auto;
-            border-radius: 8px;
-            margin: 16px 0;
+            border-radius: 10px;
+            margin: 18px 0;
             display: block;
+        }
+
+        /* 表格外层滚动容器，防止宽表格溢出卡片 */
+        .markdown-content .table-wrap {
+            width: 100%;
+            overflow-x: auto;
+            margin: 18px 0;
         }
 
         .markdown-content table {
             width: 100%;
             border-collapse: collapse;
-            margin: 16px 0;
             color: #c9d1d9;
         }
 
         .markdown-content th,
         .markdown-content td {
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 8px 12px;
+            border: 1px solid var(--card-border);
+            padding: 10px 14px;
             text-align: left;
         }
 
         .markdown-content th {
             background: rgba(255, 255, 255, 0.05);
             font-weight: 600;
-            color: #f0f2f5;
+            color: var(--light);
+            white-space: nowrap;
         }
 
         .markdown-content hr {
             border: none;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-            margin: 24px 0;
+            border-top: 1px solid var(--card-border);
+            margin: 26px 0;
         }
 
+        /* 动态背景光晕 */
         .background {
             position: fixed;
             top: 0;
@@ -258,61 +353,86 @@ $content = $db->getNotebookContent($id);
             right: 0;
             bottom: 0;
             z-index: 0;
-            background: linear-gradient(135deg, #0f1117 0%, #1c2033 100%);
+            overflow: hidden;
         }
 
         .shape {
             position: absolute;
             border-radius: 50%;
             filter: blur(80px);
-            opacity: 0.15;
+            opacity: 0.14;
         }
 
         .shape-1 {
             top: -200px;
-            right: -200px;
-            width: 600px;
-            height: 600px;
-            background: #4a6bfa;
+            right: -150px;
+            width: 560px;
+            height: 560px;
+            background: var(--primary);
+            animation: float 11s ease-in-out infinite alternate;
         }
 
         .shape-2 {
             bottom: -200px;
-            left: -200px;
-            width: 500px;
-            height: 500px;
-            background: #6c63ff;
+            left: -150px;
+            width: 480px;
+            height: 480px;
+            background: var(--secondary);
+            animation: float 13s ease-in-out infinite alternate-reverse;
+        }
+
+        .shape-3 {
+            top: 40%;
+            left: 50%;
+            width: 320px;
+            height: 320px;
+            background: var(--accent);
+            opacity: 0.07;
+            animation: float 15s ease-in-out infinite alternate;
+        }
+
+        @keyframes float {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(30px, 40px); }
         }
 
         @media (max-width: 768px) {
             .container {
-                padding: 15px;
+                padding: 16px 14px;
+                padding-left: max(14px, env(safe-area-inset-left));
+                padding-right: max(14px, env(safe-area-inset-right));
             }
+
+            .header {
+                padding: 14px 0;
+                margin-bottom: 22px;
+            }
+
+            .logo { font-size: 1.5em; }
+            .logo i { width: 36px; height: 36px; }
 
             .content-card {
-                padding: 20px;
-                min-height: calc(100vh - 150px);
+                padding: 24px 18px;
+                border-radius: 16px;
+                min-height: calc(100vh - 170px);
             }
+            .content-card::before { border-radius: 16px; }
 
-            .markdown-content {
-                padding: 15px;
-            }
+            .markdown-content { font-size: 15px; }
 
-            .markdown-content h1 {
-                font-size: 24px;
-            }
+            .markdown-content h1 { font-size: 24px; }
+            .markdown-content h2 { font-size: 20px; }
+            .markdown-content h3 { font-size: 18px; }
+        }
 
-            .markdown-content h2 {
-                font-size: 20px;
+        @media (max-width: 480px) {
+            .header { justify-content: center; }
+            /* 覆盖 main.js 注入的 logo 固定宽度，使其内容真正居中 */
+            .logo {
+                width: auto !important;
+                justify-content: center;
             }
-
-            .markdown-content h3 {
-                font-size: 18px;
-            }
-
-            .logo span {
-                font-size: 20px;
-            }
+            .back-link { font-size: 0.92em; padding: 8px 14px; }
         }
     </style>
 </head>
@@ -320,6 +440,7 @@ $content = $db->getNotebookContent($id);
     <div class="background">
         <div class="shape shape-1"></div>
         <div class="shape shape-2"></div>
+        <div class="shape shape-3"></div>
     </div>
 
     <div class="container">
@@ -328,6 +449,10 @@ $content = $db->getNotebookContent($id);
                 <i class="fas fa-book"></i>
                 <span>云笔记</span>
             </a>
+            <div class="note-badge">
+                <i class="fas fa-globe"></i>
+                <span>公开笔记 · <?php echo htmlspecialchars($id); ?></span>
+            </div>
             <a href="index.php" class="back-link">
                 <i class="fas fa-arrow-left"></i>
                 返回首页
@@ -359,6 +484,15 @@ $content = $db->getNotebookContent($id);
             
             // 渲染 Markdown
             content.innerHTML = window.md.render(markdown);
+
+            // 给表格套上可横向滚动的容器，防止宽表格溢出卡片
+            content.querySelectorAll('table').forEach((table) => {
+                if (table.parentElement && table.parentElement.classList.contains('table-wrap')) return;
+                const wrap = document.createElement('div');
+                wrap.className = 'table-wrap';
+                table.parentNode.insertBefore(wrap, table);
+                wrap.appendChild(table);
+            });
             
             // 代码高亮
             document.querySelectorAll('pre code').forEach((block) => {
@@ -380,4 +514,4 @@ $content = $db->getNotebookContent($id);
         });
     </script>
 </body>
-</html> 
+</html>

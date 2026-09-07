@@ -39,7 +39,7 @@ $total_pages = ceil($total_notebooks / $per_page);
 <html lang="zh">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>云笔记 - 归档码查询</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -144,7 +144,15 @@ $total_pages = ceil($total_notebooks / $per_page);
         }
 
         .logo i {
-            color: white;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            width: 42px;
+            height: 42px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            font-size: 0.9em;
+            box-shadow: 0 6px 18px rgba(74, 107, 250, 0.4);
         }
 
         .logo span {
@@ -411,12 +419,24 @@ $total_pages = ceil($total_notebooks / $per_page);
         }
 
         @media (max-width: 640px) {
+            .container {
+                max-width: 100% !important;
+                padding: 20px 16px;
+                padding-left: max(16px, env(safe-area-inset-left));
+                padding-right: max(16px, env(safe-area-inset-right));
+            }
+
             .archive-form {
                 flex-direction: column;
             }
             
             .archive-button {
                 width: 100%;
+            }
+
+            .notebook-header {
+                flex-wrap: wrap;
+                gap: 0.5rem;
             }
 
             .pagination {
@@ -514,9 +534,19 @@ $total_pages = ceil($total_notebooks / $per_page);
                         <?php endif; ?>
                         
                         <?php
-                        // 显示页码
-                        $start_page = max(1, $page - 2);
-                        $end_page = min($total_pages, $page + 2);
+                        // 显示页码（固定窗口大小，保持翻页器宽度稳定）
+                        $window = 3; // 中间始终显示的页码数量
+                        if ($total_pages <= $window) {
+                            $start_page = 1;
+                            $end_page = $total_pages;
+                        } else {
+                            $start_page = max(1, $page - 1);
+                            $end_page = $start_page + $window - 1;
+                            if ($end_page > $total_pages) {
+                                $end_page = $total_pages;
+                                $start_page = $end_page - $window + 1;
+                            }
+                        }
                         
                         for ($i = $start_page; $i <= $end_page; $i++): ?>
                             <?php if ($i == $page): ?>

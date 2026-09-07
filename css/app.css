@@ -196,6 +196,18 @@ a:hover {
     text-decoration: none;
 }
 
+.logo i {
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    width: 42px;
+    height: 42px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    font-size: 0.9em;
+    box-shadow: 0 6px 18px rgba(74, 107, 250, 0.4);
+}
+
 .logo span {
     background: linear-gradient(90deg, #4a6bfa, #6c63ff);
     -webkit-background-clip: text;

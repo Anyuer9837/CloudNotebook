@@ -270,6 +270,18 @@ $total_pages = ceil($total_notebooks / $per_page);
             text-decoration: none;
         }
 
+        .logo i {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            width: 42px;
+            height: 42px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            font-size: 0.9em;
+            box-shadow: 0 6px 18px rgba(74, 107, 250, 0.4);
+        }
+
         .logo span {
             background: linear-gradient(90deg, var(--primary), var(--secondary));
             -webkit-background-clip: text;
@@ -419,6 +431,13 @@ $total_pages = ceil($total_notebooks / $per_page);
 
         .notebook-list { width: 100%; }
 
+        /* 表格横向滚动容器，防止内容溢出卡片 */
+        .table-scroll {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
         .notebook-table {
             width: 100%;
             border-collapse: separate;
@@ -429,9 +448,10 @@ $total_pages = ceil($total_notebooks / $per_page);
         }
 
         .notebook-table th, .notebook-table td {
-            padding: 8px;
+            padding: 8px 12px;
             text-align: left;
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            white-space: nowrap; /* 防止表头/内容被逐字竖排换行 */
         }
 
         .notebook-table th {
@@ -452,14 +472,21 @@ $total_pages = ceil($total_notebooks / $per_page);
 
         .pagination {
             display: flex;
+            flex-wrap: wrap;
             justify-content: center;
             margin-top: 15px;
             gap: 5px;
         }
 
         .pagination a, .pagination span {
-            display: inline-block;
-            padding: 5px 10px;
+            flex: 0 0 auto;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 35px;
+            height: 35px;
+            padding: 0 10px;
+            box-sizing: border-box;
             border-radius: var(--border-radius);
             background-color: rgba(255, 255, 255, 0.05);
             color: var(--light);
@@ -754,6 +781,7 @@ $total_pages = ceil($total_notebooks / $per_page);
                         显示 <?php echo $total_notebooks; ?> 条记录中的 <?php echo min($offset + 1, $total_notebooks); ?> 到 <?php echo min($offset + $per_page, $total_notebooks); ?> 条
                     </div>
                     
+                    <div class="table-scroll">
                     <table class="notebook-table">
                         <thead>
                             <tr>
@@ -809,6 +837,7 @@ $total_pages = ceil($total_notebooks / $per_page);
                             <?php endfor; ?>
                         </tbody>
                     </table>
+                    </div>
                     
                     <!-- 分页导航 -->
                     <?php if ($total_pages > 1): ?>
@@ -823,8 +852,19 @@ $total_pages = ceil($total_notebooks / $per_page);
                         
                         <?php
                         // 显示页码
-                        $start_page = max(1, $page - 2);
-                        $end_page = min($total_pages, $page + 2);
+                        // 显示页码（固定窗口大小，保持翻页器宽度稳定）
+                        $window = 3; // 中间始终显示的页码数量
+                        if ($total_pages <= $window) {
+                            $start_page = 1;
+                            $end_page = $total_pages;
+                        } else {
+                            $start_page = max(1, $page - 1);
+                            $end_page = $start_page + $window - 1;
+                            if ($end_page > $total_pages) {
+                                $end_page = $total_pages;
+                                $start_page = $end_page - $window + 1;
+                            }
+                        }
                         
                         for ($i = $start_page; $i <= $end_page; $i++): ?>
                             <?php if ($i == $page): ?>
