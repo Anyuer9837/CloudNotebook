@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <!-- 整合后的CSS样式表 -->
-    <link rel="stylesheet" href="css/app.css">
+    <link rel="stylesheet" href="<?php echo APP_BASE; ?>css/app.css">
     
     <!-- 强制隐藏滚动条的内联样式 -->
     <style>
@@ -652,11 +652,12 @@
     </style>
     
     <!-- Markdown和高亮库 -->
-    <script src="./js/highlight.min.js"></script>
-    <script src="./js/markdown-it.min.js"></script>
+    <script>window.APP_BASE = '<?php echo APP_BASE; ?>';</script>
+    <script src="<?php echo APP_BASE; ?>js/highlight.min.js"></script>
+    <script src="<?php echo APP_BASE; ?>js/markdown-it.min.js"></script>
     
     <!-- 整合后的Markdown处理模块 -->
-    <script src="./js/markdown-bundle.js"></script>
+    <script src="<?php echo APP_BASE; ?>js/markdown-bundle.js"></script>
 </head>
 <body>
     <div class="background">
@@ -668,18 +669,18 @@
     <div class="container">
         <header class="header">
             <div class="left-section">
-                <a href="index.php" class="logo">
-                    <i class="fas fa-book"></i>
-                    <span>云笔记</span>
+                <a href="<?php echo APP_BASE; ?>index.php" class="logo">
+                  <i class="fas fa-book"></i>
+                <span>云笔记</span>
                 </a>
                 <h1 class="notebook-title"><?php echo htmlspecialchars($id); ?> 笔记本</h1>
-            </div>
-            <div class="nav-links">
-                <a href="index.php" class="back-link">
-                    <i class="fas fa-arrow-left"></i> 返回首页
+                    </div>
+                 <div class="nav-links">
+                <a href="<?php echo APP_BASE; ?>index.php" class="back-link">
+                <i class="fas fa-arrow-left"></i> 返回首页
                 </a>
                 <?php if ($is_authenticated): ?>
-                <a href="notebook.php?id=<?php echo urlencode($id); ?>&logout=1" class="back-link">
+                     <a href="<?php echo APP_BASE; ?>pages/notebook.php?id=<?php echo urlencode($id); ?>&logout=1" class="back-link">
                     <i class="fas fa-sign-out-alt"></i> 退出登录
                 </a>
                 <?php endif; ?>
@@ -910,7 +911,7 @@
                     });
 
                     copyPublicLinkButton.addEventListener('click', function() {
-                        const publicUrl = window.location.origin + '/public.php?id=' + noteId;
+                        const publicUrl = window.location.origin + window.APP_BASE + 'pages/public.php?id=' + noteId;
                         navigator.clipboard.writeText(publicUrl).then(() => {
                             const originalText = this.innerHTML;
                             this.innerHTML = '<i class="fas fa-check"></i> 已复制';
@@ -933,14 +934,14 @@
                             formData.append('action', 'delete_notebook');
                             formData.append('id', noteId);
                             
-                            fetch('system/api.php', {
+                            fetch(window.APP_BASE + 'system/api.php', {
                                 method: 'POST',
                                 body: formData
                             })
                             .then(response => response.json())
                             .then(data => {
                                 if (data.success) {
-                                    window.location.href = 'index.php';
+                                    window.location.href = window.APP_BASE + 'index.php';
                                 } else {
                                     alert('删除失败：' + (data.message || '未知错误'));
                                 }
@@ -962,7 +963,7 @@
                         // 保存所有设置
                         Promise.all([
                             // 保存密码设置
-                            fetch('./system/api.php', {
+                            fetch(window.APP_BASE + 'system/api.php', {
                                 method: 'POST',
                                 headers: {
                                     'Content-Type': 'application/x-www-form-urlencoded',
@@ -970,7 +971,7 @@
                                 body: 'action=update_settings&id=' + noteId + '&always_require_password=' + (alwaysRequirePassword ? '1' : '0')
                             }),
                             // 保存公开设置
-                            fetch('./system/api.php', {
+                            fetch(window.APP_BASE + 'system/api.php', {
                                 method: 'POST',
                                 headers: {
                                     'Content-Type': 'application/x-www-form-urlencoded',
@@ -978,7 +979,7 @@
                                 body: 'action=update_public&id=' + noteId + '&ispublic=' + (isPublic ? '1' : '0')
                             }),
                             // 先检查归档码是否存在
-                            fetch('./system/api.php', {
+                            fetch(window.APP_BASE + 'system/api.php', {
                                 method: 'POST',
                                 headers: {
                                     'Content-Type': 'application/x-www-form-urlencoded',
@@ -990,7 +991,7 @@
                                     return new Promise((resolve, reject) => {
                                         if (confirm('该归档码已存在，确定要归档到该处吗？')) {
                                             // 用户确认后再设置归档码
-                                            fetch('./system/api.php', {
+                                            fetch(window.APP_BASE + 'system/api.php', {
                                                 method: 'POST',
                                                 headers: {
                                                     'Content-Type': 'application/x-www-form-urlencoded',
@@ -1003,7 +1004,7 @@
                                     });
                                 } else {
                                     // 归档码不存在，直接设置
-                                    return fetch('./system/api.php', {
+                                    return fetch(window.APP_BASE + 'system/api.php', {
                                         method: 'POST',
                                         headers: {
                                             'Content-Type': 'application/x-www-form-urlencoded',
@@ -1086,7 +1087,7 @@
                         submitButton.disabled = true;
                         
                         // 提交到API
-                        fetch('./system/api.php', {
+                        fetch(window.APP_BASE + 'system/api.php', {
                             method: 'POST',
                             body: formData
                         })
@@ -1094,7 +1095,7 @@
                         .then(data => {
                             if (data.success) {
                                 // 成功处理
-                                let redirectUrl = `notebook.php?id=${encodeURIComponent(noteId)}`;
+                                let redirectUrl = `${window.APP_BASE}pages/notebook.php?id=${encodeURIComponent(noteId)}`;
                                 
                                 // 如果设置了总是需要密码，且验证成功，添加verified参数
                                 if (!isNew && data.always_require_password) {
@@ -1252,7 +1253,7 @@
                     formData.append('id', noteId);
                     formData.append('content', content);
                     
-                    fetch('./system/api.php', {
+                    fetch(window.APP_BASE + 'system/api.php', {
                         method: 'POST',
                         body: formData
                     })

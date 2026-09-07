@@ -658,9 +658,9 @@ $active_tab = !empty($prefill_archive) ? 'archive' : 'note';
                 <span>云笔记</span>
             </a>
             <nav class="top-nav">
-                <a href="archive.php" class="nav-link">归档码查询</a>
+                <a href="<?php echo APP_BASE; ?>pages/archive.php" class="nav-link">归档码查询</a>
                 <a href="#features" class="nav-link">云笔记介绍</a>
-                <a href="system/admin.php" class="nav-link">管理员入口</a>
+          <a href="<?php echo APP_BASE; ?>pages/admin.php" class="nav-link">管理员入口</a>
             </nav>
         </header>
 
@@ -703,7 +703,7 @@ $active_tab = !empty($prefill_archive) ? 'archive' : 'note';
                         <i class="fas fa-circle-info"></i>
                         输入笔记本 ID 即可进入；若 ID 不存在，将引导你创建一个新的加密笔记本。
                     </p>
-                    <form id="noteForm" action="notebook.php" method="get">
+                    <form id="noteForm" action="<?php echo APP_BASE; ?>pages/notebook.php" method="get">
                         <div class="form-group">
                             <label for="noteId" class="form-label">笔记本 ID</label>
                             <div class="input-wrap">
@@ -721,7 +721,7 @@ $active_tab = !empty($prefill_archive) ? 'archive' : 'note';
                         <i class="fas fa-circle-info"></i>
                         归档码是笔记本的「分组标签」。输入归档码，即可列出该组下的所有笔记本，快速找回。
                     </p>
-                    <form action="archive.php" method="get">
+                    <form action="<?php echo APP_BASE; ?>pages/archive.php" method="get">
                         <div class="form-group">
                             <label for="archiveCode" class="form-label">归档码</label>
                             <div class="input-wrap">
@@ -793,7 +793,7 @@ $active_tab = !empty($prefill_archive) ? 'archive' : 'note';
                     <p>在上方「归档码查询」或下方按钮输入归档码，即可列出该组下所有笔记本。</p>
                 </div>
             </div>
-            <a href="archive.php" class="btn"><i class="fas fa-key"></i> 前往归档码查询</a>
+            <a href="<?php echo APP_BASE; ?>pages/archive.php" class="btn"><i class="fas fa-key"></i> 前往归档码查询</a>
         </section>
 
         <footer class="footer">
@@ -827,6 +827,7 @@ $active_tab = !empty($prefill_archive) ? 'archive' : 'note';
             });
         })();
     </script>
-    <script src="js/main.js"></script>
+    <script>window.APP_BASE = '<?php echo APP_BASE; ?>';</script>
+    <script src="<?php echo APP_BASE; ?>js/main.js"></script>
 </body>
 </html>

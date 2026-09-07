@@ -3,7 +3,7 @@
 date_default_timezone_set('Asia/Shanghai');
 
 // 引入核心文件
-require_once('system/core.php');
+require_once(__DIR__ . '/../system/core.php');
 
 // 处理请求
 $id = isset($_GET['id']) ? preg_replace('/[^a-zA-Z0-9_-]/', '', $_GET['id']) : '';
@@ -16,7 +16,7 @@ if (isset($_GET['logout'])) {
 
 // 验证ID
 if (empty($id)) {
-    header('Location: index.php');
+    header('Location: ' . APP_BASE . 'index.php');
     exit;
 }
 
@@ -40,5 +40,5 @@ if ($is_new) {
 }
 
 // 渲染笔记本页面
-require_once('system/notebook_layout.php');
+require_once(__DIR__ . '/../system/notebook_layout.php');
 ?> 

@@ -3,6 +3,10 @@
  * 整合了编辑器、预览和界面交互功能
  */
 
+// 站点根路径由 PHP 页面通过 window.APP_BASE 注入（形如 "/" 或 "/CloudNotebook/"）
+// 页面可能位于根目录或 pages/ 子目录，因此接口地址必须基于站点根拼接
+const API_URL = (window.APP_BASE || './') + 'system/api.php';
+
 // 在DOM加载完成后初始化应用
 document.addEventListener('DOMContentLoaded', function() {
     // 检查当前页面类型
@@ -213,7 +217,7 @@ function initPasswordForm() {
         formData.append('id', noteId);
         formData.append('password', password);
         
-        fetch('./system/api.php', {
+        fetch(API_URL, {
             method: 'POST',
             body: formData
         })
@@ -247,7 +251,7 @@ function initPasswordForm() {
         formData.append('password', password);
         formData.append('confirm_password', confirmPassword);
         
-        fetch('./system/api.php', {
+        fetch(API_URL, {
             method: 'POST',
             body: formData
         })
@@ -360,7 +364,7 @@ function initEditor() {
         
         showSaveStatus('正在保存...', true);
         
-        fetch('./system/api.php', {
+        fetch(API_URL, {
             method: 'POST',
             body: formData
         })
@@ -691,8 +695,8 @@ function reloadMarkdownIt() {
         }
     }
     
-    // 使用基础URL
-    const baseUrl = new URL('.', window.location.href).href;
+    // 使用站点根路径作为基础URL（页面可能位于 pages/ 子目录，不能用当前目录推导）
+    const baseUrl = new URL(window.APP_BASE || './', window.location.href).href;
     
     // 移除旧脚本
     markdownItScripts.forEach(function(script) {

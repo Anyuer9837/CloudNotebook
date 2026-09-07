@@ -18,6 +18,31 @@ if (session_status() == PHP_SESSION_NONE) {
 
 /**
  * ====================================================
+ * 站点根路径常量 APP_BASE
+ * ----------------------------------------------------
+ * 值形如 "/" 或 "/CloudNotebook/"，即项目根目录对应的 URL 路径。
+ * 入口脚本分布在根目录(index.php)、pages/ 和 system/ 三层，
+ * 统一用 APP_BASE 拼接链接与静态资源，避免相对路径层级错乱。
+ * ====================================================
+ */
+if (!defined('APP_BASE')) {
+    $__project_root = str_replace('\\', '/', dirname(__DIR__));
+    $__script_file  = isset($_SERVER['SCRIPT_FILENAME']) ? str_replace('\\', '/', realpath($_SERVER['SCRIPT_FILENAME'])) : '';
+    $__script_name  = isset($_SERVER['SCRIPT_NAME']) ? str_replace('\\', '/', $_SERVER['SCRIPT_NAME']) : '/index.php';
+    $__base = '/';
+
+    if ($__script_file !== '' && strpos($__script_file, $__project_root) === 0) {
+        // 入口脚本相对项目根的路径，例如 pages/notebook.php
+        $__relative = ltrim(substr($__script_file, strlen($__project_root)), '/');
+        $__base = substr($__script_name, 0, strlen($__script_name) - strlen($__relative));
+    }
+
+    define('APP_BASE', $__base !== '' ? $__base : '/');
+    unset($__project_root, $__script_file, $__script_name, $__relative, $__base);
+}
+
+/**
+ * ====================================================
  * 密码兼容库 - 为低版本PHP提供密码哈希功能
  * ====================================================
  */
@@ -203,7 +228,7 @@ class NotebookDB {
 4. 设置公开/私密：
    - 点击右上角的设置按钮
    - 选择"设为公开"或"设为私密"
-   - 公开笔记的访问地址：https://你的域名/notebook.php?id=笔记ID
+   - 公开笔记的访问地址：https://你的域名/pages/public.php?id=笔记ID
 
 开始记录你的想法吧！
 EOT;
@@ -897,7 +922,7 @@ class NotebookHandler {
             session_write_close();
             
             // 重定向回笔记本页面，并添加一个时间戳参数防止缓存
-            header('Location: ../notebook.php?id=' . urlencode($id) . '&t=' . time());
+            header('Location: ' . APP_BASE . 'pages/notebook.php?id=' . urlencode($id) . '&t=' . time());
             exit;
         }
     }

@@ -3,7 +3,7 @@
 date_default_timezone_set('Asia/Shanghai');
 
 // 引入核心文件
-require_once('system/core.php');
+require_once(__DIR__ . '/../system/core.php');
 
 // 初始化变量
 $notebooks = [];
@@ -460,12 +460,12 @@ $total_pages = ceil($total_notebooks / $per_page);
 
     <div class="container">
         <header class="header">
-            <a href="index.php" class="logo">
+            <a href="<?php echo APP_BASE; ?>index.php" class="logo">
                 <i class="fas fa-book"></i>
                 <span>云笔记</span>
             </a>
             <div class="top-nav">
-                <a href="index.php" class="nav-link">
+                <a href="<?php echo APP_BASE; ?>index.php" class="nav-link">
                     <i class="fas fa-home"></i> 返回首页
                 </a>
             </div>
@@ -498,7 +498,7 @@ $total_pages = ceil($total_notebooks / $per_page);
         <?php if ($has_searched): ?>
             <?php if (!empty($notebooks)): ?>
                 <?php foreach ($notebooks as $notebook): ?>
-                    <a href="notebook.php?id=<?php echo urlencode($notebook['id']); ?>" class="notebook-card">
+                    <a href="<?php echo APP_BASE; ?>pages/notebook.php?id=<?php echo urlencode($notebook['id']); ?>" class="notebook-card">
                         <div class="notebook-header">
                             <div class="notebook-id">
                                 <i class="fas fa-book"></i>

@@ -3,14 +3,14 @@
 date_default_timezone_set('Asia/Shanghai');
 
 // 引入核心文件
-require_once('system/core.php');
+require_once(__DIR__ . '/../system/core.php');
 
 // 获取笔记本ID
 $id = isset($_GET['id']) ? trim($_GET['id']) : '';
 
 // 如果没有提供ID，重定向到首页
 if (empty($id)) {
-    header('Location: index.php');
+    header('Location: ' . APP_BASE . 'index.php');
     exit;
 }
 
@@ -37,11 +37,12 @@ $content = $db->getNotebookContent($id);
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title><?php echo htmlspecialchars($id); ?> - 云笔记</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="css/app.css">
-    <script src="./js/highlight.min.js"></script>
-    <script src="./js/markdown-it.min.js"></script>
-    <script src="./js/markdown-bundle.js"></script>
-    <script src="./js/main.js"></script>
+    <link rel="stylesheet" href="<?php echo APP_BASE; ?>css/app.css">
+    <script>window.APP_BASE = '<?php echo APP_BASE; ?>';</script>
+    <script src="<?php echo APP_BASE; ?>js/highlight.min.js"></script>
+    <script src="<?php echo APP_BASE; ?>js/markdown-it.min.js"></script>
+    <script src="<?php echo APP_BASE; ?>js/markdown-bundle.js"></script>
+    <script src="<?php echo APP_BASE; ?>js/main.js"></script>
     <style>
         /* 隐藏所有滚动条的关键样式 */
         ::-webkit-scrollbar {
@@ -445,7 +446,7 @@ $content = $db->getNotebookContent($id);
 
     <div class="container">
         <header class="header">
-            <a href="index.php" class="logo">
+            <a href="<?php echo APP_BASE; ?>index.php" class="logo">
                 <i class="fas fa-book"></i>
                 <span>云笔记</span>
             </a>
@@ -453,7 +454,7 @@ $content = $db->getNotebookContent($id);
                 <i class="fas fa-globe"></i>
                 <span>公开笔记 · <?php echo htmlspecialchars($id); ?></span>
             </div>
-            <a href="index.php" class="back-link">
+            <a href="<?php echo APP_BASE; ?>index.php" class="back-link">
                 <i class="fas fa-arrow-left"></i>
                 返回首页
             </a>

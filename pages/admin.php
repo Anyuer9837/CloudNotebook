@@ -3,7 +3,7 @@
 date_default_timezone_set('Asia/Shanghai');
 
 // 引入核心文件
-require_once(__DIR__.'/core.php');
+require_once(__DIR__ . '/../system/core.php');
 
 // 设置管理员密码
 $admin_password = 'notebook';
@@ -717,20 +717,20 @@ $total_pages = ceil($total_notebooks / $per_page);
 
     <div class="container">
         <header class="header">
-            <a href="../index.php" class="logo">
+            <a href="<?php echo APP_BASE; ?>index.php" class="logo">
                 <i class="fas fa-book"></i>
                 <span>云笔记</span>
             </a>
             <div class="top-nav">
                 <?php if ($logged_in): ?>
-                <a href="../index.php" class="nav-link">
+                <a href="<?php echo APP_BASE; ?>index.php" class="nav-link">
                     <i class="fas fa-home"></i>首页
                 </a>
                 <a href="admin.php?logout=1" class="nav-link">
                     <i class="fas fa-sign-out-alt"></i>注销
                 </a>
                 <?php else: ?>
-                <a href="../index.php" class="nav-link">
+                <a href="<?php echo APP_BASE; ?>index.php" class="nav-link">
                     <i class="fas fa-home"></i> 返回首页
                 </a>
                 <?php endif; ?>
@@ -760,7 +760,7 @@ $total_pages = ceil($total_notebooks / $per_page);
                         </div>
                         <div class="btn-container">
                             <button type="submit" class="btn">登录</button>
-                            <a href="../index.php" class="btn">返回首页</a>
+                            <a href="<?php echo APP_BASE; ?>index.php" class="btn">返回首页</a>
                         </div>
                     </form>
                 </div>

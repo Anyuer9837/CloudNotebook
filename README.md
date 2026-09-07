@@ -60,7 +60,7 @@
 
 3. **公开链接**：
    - 公开笔记可获取分享链接
-   - 链接格式：`http://yourdomain.com/notebook.php?id=笔记ID`
+   - 链接格式：`http://yourdomain.com/pages/public.php?id=笔记ID`
 
 ### 归档码功能
 
@@ -69,7 +69,7 @@
    - 归档码用于分类和组织笔记本
    
 2. **查找笔记本**：
-   - 访问归档页面：`http://yourdomain.com/archive.php`
+   - 访问归档页面：`http://yourdomain.com/pages/archive.php`
    - 输入归档码查看相关笔记本
    - 支持分页浏览归档结果
 
@@ -92,7 +92,7 @@
 
 ### 修改管理员密码
 
-1. 打开 `system/admin.php` 文件
+1. 打开 `pages/admin.php` 文件
 2. 找到第8行: `$admin_password = 'notebook';`
 3. 将 `notebook` 修改为您想要设置的新密码
 4. 保存文件
@@ -115,7 +115,7 @@
    - `data` 目录：755
    - `data/notebook.db`：644
 4. 配置管理员密码：
-   - 编辑 `system/admin.php`
+   - 编辑 `pages/admin.php`
    - 修改 `$admin_password` 值
 
 ## 📁 项目结构
@@ -132,15 +132,16 @@ CloudNotebook/
 │   ├── main.js         # 主要逻辑
 │   ├── markdown-bundle.js # Markdown处理
 │   └── markdown-it.min.js # Markdown解析
-├── system/             # 后端文件
-│   ├── admin.php      # 管理界面
+├── system/             # 后端逻辑（不直接访问）
 │   ├── api.php        # API接口
 │   ├── core.php       # 核心功能
-│   └── notebook_layout.php # 笔记本模板
-├── index.php          # 网站主页
-├── notebook.php       # 笔记本入口
-├── archive.php        # 归档查询
-└── public.php         # 公开访问
+│   └── notebook_layout.php # 笔记本模板（被 pages/notebook.php 引入）
+├── pages/             # 页面入口
+│   ├── admin.php      # 管理界面
+│   ├── notebook.php   # 笔记本入口
+│   ├── archive.php    # 归档查询
+│   └── public.php     # 公开访问
+└── index.php          # 网站主页
 ```
 
 ## 🔐 安全建议
