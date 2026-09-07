@@ -755,6 +755,8 @@ code.hljs {
 #editor::-webkit-scrollbar,
 #preview::-webkit-scrollbar {
     width: 0 !important;
+    height: 0 !important;
+    display: none !important;
 }
 
 /* 归档码查询页面样式 */
@@ -913,9 +915,6 @@ code.hljs {
     .search-description {
         font-size: 1em;
     }
-}
-    height: 0 !important;
-    display: none !important;
 }
 
 /* Firefox 滚动条隐藏 */
