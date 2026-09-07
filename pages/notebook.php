@@ -41,4 +41,3 @@ if ($is_new) {
 
 // 渲染笔记本页面
 require_once(__DIR__ . '/../system/notebook_layout.php');
-?> 

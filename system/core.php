@@ -118,6 +118,7 @@ if (!function_exists('password_hash')) {
  */
 class NotebookDB {
     private $db;
+    private $dbPath;
     private static $instance;
     
     /**
@@ -126,17 +127,64 @@ class NotebookDB {
     private function __construct() {
         try {
             // 计算数据库文件的绝对路径
-            $db_path = dirname(__DIR__) . '/data/notebook.db';
+            $this->dbPath = dirname(__DIR__) . '/data/notebook.db';
             
             // 创建/连接到SQLite数据库
-            $this->db = new PDO('sqlite:' . $db_path);
+            $this->db = new PDO('sqlite:' . $this->dbPath);
             $this->db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+            $this->db->setAttribute(PDO::ATTR_TIMEOUT, 5);
             
             // 初始化表结构（如果不存在）
             $this->initTables();
         } catch (PDOException $e) {
             die('数据库连接失败: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * 获取数据库文件路径
+     */
+    public function getDbPath() {
+        return $this->dbPath;
+    }
+
+    /**
+     * 数据库写权限自检
+     * SQLite 写入不仅需要 db 文件可写，还需要所在目录可写（用于创建 -journal / -wal 文件）
+     */
+    public function getWriteDiagnostics() {
+        $dir = dirname($this->dbPath);
+        $owner = null;
+        $phpUser = null;
+
+        if (function_exists('posix_getpwuid')) {
+            if (file_exists($this->dbPath)) {
+                $info = @posix_getpwuid(@fileowner($this->dbPath));
+                $owner = isset($info['name']) ? $info['name'] : null;
+            }
+            if (function_exists('posix_geteuid')) {
+                $info = @posix_getpwuid(posix_geteuid());
+                $phpUser = isset($info['name']) ? $info['name'] : null;
+            }
+        }
+
+        return array(
+            'db_path'      => $this->dbPath,
+            'db_exists'    => file_exists($this->dbPath),
+            'db_writable'  => is_writable($this->dbPath),
+            'dir_writable' => is_writable($dir),
+            'db_owner'     => $owner,
+            'php_user'     => $phpUser !== null ? $phpUser : (getenv('USER') ? getenv('USER') : null),
+            'free_space'   => @disk_free_space($dir),
+        );
+    }
+
+    /**
+     * 判断数据库当前是否可写
+     */
+    public function isWritable() {
+        $d = $this->getWriteDiagnostics();
+        return $d['db_writable'] && $d['dir_writable'];
     }
     
     /**
@@ -566,8 +614,36 @@ class NotebookAPI {
                     break;
             }
         } catch (Exception $e) {
-            echo json_encode(['success' => false, 'message' => '处理请求时发生错误']);
+            $this->fail($e, '处理请求时发生错误');
         }
+    }
+
+    /**
+     * 统一的异常输出：写日志 + 返回可诊断的错误信息
+     * 之前所有异常都被压成一句"处理请求时发生错误"，导致数据库不可写这类
+     * 环境问题完全无法定位（表现为"用户无法修改笔记"）。
+     */
+    private function fail($e, $fallback) {
+        $detail = $e->getMessage();
+        error_log('[CloudNotebook] ' . $fallback . ': ' . $detail);
+
+        $message = $fallback;
+
+        // 识别 SQLite 只读 / 权限类错误，直接给出可操作的提示
+        if (preg_match('/readonly database|unable to open database|attempt to write|disk I\/O error|database is locked/i', $detail)) {
+            $d = $this->db->getWriteDiagnostics();
+            error_log('[CloudNotebook] 数据库写诊断: ' . json_encode($d));
+
+            $message = '数据库不可写，保存失败。请检查目录权限：'
+                . $d['db_path']
+                . '（db_writable=' . ($d['db_writable'] ? 'yes' : 'no')
+                . ', dir_writable=' . ($d['dir_writable'] ? 'yes' : 'no')
+                . ', db_owner=' . ($d['db_owner'] !== null ? $d['db_owner'] : 'unknown')
+                . ', php_user=' . ($d['php_user'] !== null ? $d['php_user'] : 'unknown') . '）';
+        }
+
+        echo json_encode(['success' => false, 'message' => $message]);
+        exit;
     }
     
     /**
@@ -704,8 +780,27 @@ class NotebookAPI {
             exit;
         }
         
+        // 保存前先做一次写权限自检，避免报出无意义的错误
+        if (!$this->db->isWritable()) {
+            $d = $this->db->getWriteDiagnostics();
+            error_log('[CloudNotebook] 保存被拒绝，数据库不可写: ' . json_encode($d));
+            echo json_encode([
+                'success' => false,
+                'message' => '数据库不可写，无法保存。请检查 ' . dirname($d['db_path']) . ' 目录及 notebook.db 的权限'
+                    . '（db_writable=' . ($d['db_writable'] ? 'yes' : 'no')
+                    . ', dir_writable=' . ($d['dir_writable'] ? 'yes' : 'no')
+                    . ', db_owner=' . ($d['db_owner'] !== null ? $d['db_owner'] : 'unknown')
+                    . ', php_user=' . ($d['php_user'] !== null ? $d['php_user'] : 'unknown') . '）'
+            ]);
+            exit;
+        }
+
         // 保存笔记本内容
-        $result = $this->db->saveNotebook($id, $content);
+        try {
+            $result = $this->db->saveNotebook($id, $content);
+        } catch (Exception $e) {
+            $this->fail($e, '保存失败');
+        }
         
         if ($result) {
             echo json_encode(['success' => true]);
@@ -953,4 +1048,3 @@ class NotebookHandler {
         return $is_authenticated;
     }
 }
-?> 
