@@ -1,0 +1,12 @@
+# 运行时数据（SQLite 数据库，切勿提交）
+data/
+*.db
+
+# IDE / 编辑器
+.idea/
+.vscode/
+*.swp
+
+# 系统文件
+.DS_Store
+Thumbs.db
