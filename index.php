@@ -588,12 +588,15 @@ $active_tab = !empty($prefill_archive) ? 'archive' : 'note';
             }
             .nav-link, .admin-link { font-size: 0.95em; padding: 7px 12px; }
             .hero { gap: 32px; margin-bottom: 56px; }
+            /* 手机端 hero 区域整体居中展示 */
+            .hero-content { text-align: center; }
             .hero-title {
                 font-size: 2.2em;
             }
             .hero-title br { display: none; }
-            .hero-subtitle { font-size: 1.08em; margin-bottom: 28px; }
-            .hero-stats { gap: 22px; }
+            .hero-subtitle { font-size: 1.08em; margin-bottom: 28px; margin-left: auto; margin-right: auto; }
+            .hero-stats { gap: 22px; justify-content: center; }
+            .stat-item { align-items: center; }
             .stat-num { font-size: 1.5em; }
             .card { padding: 26px 20px; }
             .section-title { font-size: 1.9em; }
