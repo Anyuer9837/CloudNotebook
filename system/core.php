@@ -309,6 +309,21 @@ EOT;
     }
     
     /**
+     * 更新笔记本密码
+     * 传入的必须是已经哈希后的密码
+     */
+    public function updatePassword($id, $passwordHash) {
+        $stmt = $this->db->prepare('
+            UPDATE notebooks 
+            SET password_hash = :password_hash, updated_at = CURRENT_TIMESTAMP 
+            WHERE id = :id
+        ');
+        $stmt->bindParam(':id', $id, PDO::PARAM_STR);
+        $stmt->bindParam(':password_hash', $passwordHash, PDO::PARAM_STR);
+        return $stmt->execute();
+    }
+    
+    /**
      * 保存笔记本内容
      */
     public function saveNotebook($id, $content) {
@@ -591,6 +606,9 @@ class NotebookAPI {
                 case 'update_settings':
                     $this->updateSettings($id);
                     break;
+                case 'change_password':
+                    $this->changePassword($id);
+                    break;
                 case 'update_public':
                     $this->updatePublicStatus($id);
                     break;
@@ -840,6 +858,87 @@ class NotebookAPI {
             echo json_encode(['success' => true]);
         } else {
             echo json_encode(['success' => false, 'message' => '更新设置失败']);
+        }
+    }
+    
+    /**
+     * 修改笔记本密码
+     * 需要已通过认证，并再次校验当前密码，防止会话被他人借用后直接改密
+     */
+    private function changePassword($id) {
+        // 检查认证
+        if (!isset($_SESSION['auth_' . $id]) || $_SESSION['auth_' . $id] !== true) {
+            echo json_encode(['success' => false, 'message' => '未授权的操作']);
+            exit;
+        }
+
+        if (!$this->db->notebookExists($id)) {
+            if (isset($_SESSION['auth_' . $id])) {
+                unset($_SESSION['auth_' . $id]);
+            }
+            echo json_encode(['success' => false, 'message' => '记事本不存在']);
+            exit;
+        }
+
+        $currentPassword = isset($_POST['current_password']) ? $_POST['current_password'] : '';
+        $newPassword     = isset($_POST['new_password']) ? $_POST['new_password'] : '';
+        $confirmPassword = isset($_POST['confirm_password']) ? $_POST['confirm_password'] : '';
+
+        if ($currentPassword === '' || $newPassword === '' || $confirmPassword === '') {
+            echo json_encode(['success' => false, 'message' => '请填写完整的密码信息']);
+            exit;
+        }
+
+        if ($newPassword !== $confirmPassword) {
+            echo json_encode(['success' => false, 'message' => '两次输入的新密码不一致']);
+            exit;
+        }
+
+        if (mb_strlen($newPassword) < 4) {
+            echo json_encode(['success' => false, 'message' => '新密码长度至少为 4 位']);
+            exit;
+        }
+
+        // 校验当前密码
+        $passwordHash = $this->db->getPasswordHash($id);
+        if (empty($passwordHash)) {
+            echo json_encode(['success' => false, 'message' => '读取记事本失败']);
+            exit;
+        }
+
+        if (!password_verify($currentPassword, $passwordHash)) {
+            echo json_encode(['success' => false, 'message' => '当前密码不正确']);
+            exit;
+        }
+
+        if (password_verify($newPassword, $passwordHash)) {
+            echo json_encode(['success' => false, 'message' => '新密码不能与当前密码相同']);
+            exit;
+        }
+
+        // 写权限自检
+        if (!$this->db->isWritable()) {
+            $d = $this->db->getWriteDiagnostics();
+            error_log('[CloudNotebook] 修改密码被拒绝，数据库不可写: ' . json_encode($d));
+            echo json_encode([
+                'success' => false,
+                'message' => '数据库不可写，无法修改密码。请检查 ' . dirname($d['db_path']) . ' 目录及 notebook.db 的权限'
+            ]);
+            exit;
+        }
+
+        try {
+            $result = $this->db->updatePassword($id, password_hash($newPassword, PASSWORD_DEFAULT));
+        } catch (Exception $e) {
+            $this->fail($e, '修改密码失败');
+        }
+
+        if ($result) {
+            // 密码已变更，保持当前会话有效，无需重新登录
+            $_SESSION['auth_' . $id] = true;
+            echo json_encode(['success' => true, 'message' => '密码修改成功']);
+        } else {
+            echo json_encode(['success' => false, 'message' => '修改密码失败']);
         }
     }
     

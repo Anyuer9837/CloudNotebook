@@ -333,6 +333,39 @@
             background: rgba(239, 68, 68, 0.9) !important;
             color: white !important;
         }
+
+        /* 修改密码表单 */
+        .password-form {
+            display: none;
+            margin-top: 10px;
+            padding: 12px;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            animation: fadeIn 0.2s ease;
+        }
+
+        .password-form.show {
+            display: block;
+        }
+
+        .password-form .settings-input {
+            margin-bottom: 10px;
+        }
+
+        .password-form .mini-btn {
+            margin-top: 4px;
+        }
+
+        .password-form-msg {
+            font-size: 0.82em;
+            margin-top: 8px;
+            text-align: center;
+            min-height: 1em;
+        }
+
+        .password-form-msg.error { color: #ef4444; }
+        .password-form-msg.success { color: var(--success); }
             color: white;
             font-size: 12px;
             top: 50%;
@@ -755,6 +788,25 @@
                                 </div>
                                 <div class="settings-divider"></div>
                                 <div class="settings-item">
+                                    <button type="button" id="toggle-password-form" class="btn mini-btn">
+                                        <i class="fas fa-key"></i> 修改密码
+                                    </button>
+                                    <div class="settings-description">修改进入此笔记本所需的密码</div>
+                                    <div id="password-form" class="password-form">
+                                        <label for="current-password" class="settings-label">当前密码</label>
+                                        <input type="password" id="current-password" class="settings-input" placeholder="请输入当前密码" autocomplete="current-password">
+                                        <label for="new-password" class="settings-label">新密码</label>
+                                        <input type="password" id="new-password" class="settings-input" placeholder="至少 4 位" autocomplete="new-password">
+                                        <label for="confirm-new-password" class="settings-label">确认新密码</label>
+                                        <input type="password" id="confirm-new-password" class="settings-input" placeholder="再次输入新密码" autocomplete="new-password">
+                                        <button type="button" id="submit-change-password" class="btn mini-btn">
+                                            <i class="fas fa-check"></i> 确认修改
+                                        </button>
+                                        <div id="password-form-msg" class="password-form-msg"></div>
+                                    </div>
+                                </div>
+                                <div class="settings-divider"></div>
+                                <div class="settings-item">
                                     <label for="archive-code" class="settings-label">归档码</label>
                                     <input type="text" id="archive-code" class="settings-input" placeholder="设置归档码以便于管理" value="<?php echo htmlspecialchars((string)$db->getArchiveCode($id)); ?>">
                                     <div class="settings-description">设置归档码后，可以通过它查找属于同一类别的笔记本</div>
@@ -951,6 +1003,108 @@
                                 alert('删除失败，请稍后重试');
                             });
                         }
+                    });
+                }
+
+                // 处理修改密码
+                const togglePasswordFormBtn = document.getElementById('toggle-password-form');
+                const passwordForm = document.getElementById('password-form');
+                const submitChangePasswordBtn = document.getElementById('submit-change-password');
+                const passwordFormMsg = document.getElementById('password-form-msg');
+                const currentPasswordInput = document.getElementById('current-password');
+                const newPasswordInput = document.getElementById('new-password');
+                const confirmNewPasswordInput = document.getElementById('confirm-new-password');
+
+                function showPasswordMsg(text, type) {
+                    if (!passwordFormMsg) return;
+                    passwordFormMsg.textContent = text;
+                    passwordFormMsg.className = 'password-form-msg' + (type ? ' ' + type : '');
+                }
+
+                function resetPasswordForm() {
+                    if (currentPasswordInput) currentPasswordInput.value = '';
+                    if (newPasswordInput) newPasswordInput.value = '';
+                    if (confirmNewPasswordInput) confirmNewPasswordInput.value = '';
+                    showPasswordMsg('', '');
+                }
+
+                if (togglePasswordFormBtn && passwordForm) {
+                    togglePasswordFormBtn.addEventListener('click', function() {
+                        passwordForm.classList.toggle('show');
+                        if (passwordForm.classList.contains('show')) {
+                            resetPasswordForm();
+                            setTimeout(() => { currentPasswordInput && currentPasswordInput.focus(); }, 50);
+                        }
+                    });
+                }
+
+                if (submitChangePasswordBtn) {
+                    submitChangePasswordBtn.addEventListener('click', function() {
+                        const currentPassword = currentPasswordInput.value;
+                        const newPassword = newPasswordInput.value;
+                        const confirmPassword = confirmNewPasswordInput.value;
+
+                        if (!currentPassword || !newPassword || !confirmPassword) {
+                            showPasswordMsg('请填写完整的密码信息', 'error');
+                            return;
+                        }
+                        if (newPassword !== confirmPassword) {
+                            showPasswordMsg('两次输入的新密码不一致', 'error');
+                            return;
+                        }
+                        if (newPassword.length < 4) {
+                            showPasswordMsg('新密码长度至少为 4 位', 'error');
+                            return;
+                        }
+                        if (newPassword === currentPassword) {
+                            showPasswordMsg('新密码不能与当前密码相同', 'error');
+                            return;
+                        }
+
+                        const formData = new FormData();
+                        formData.append('action', 'change_password');
+                        formData.append('id', noteId);
+                        formData.append('current_password', currentPassword);
+                        formData.append('new_password', newPassword);
+                        formData.append('confirm_password', confirmPassword);
+
+                        submitChangePasswordBtn.disabled = true;
+                        showPasswordMsg('正在提交...', '');
+
+                        fetch(window.APP_BASE + 'system/api.php', {
+                            method: 'POST',
+                            body: formData
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            submitChangePasswordBtn.disabled = false;
+                            if (data.success) {
+                                showPasswordMsg('密码修改成功', 'success');
+                                setTimeout(() => {
+                                    resetPasswordForm();
+                                    passwordForm.classList.remove('show');
+                                    settingsMenu.classList.remove('show');
+                                }, 1500);
+                            } else {
+                                showPasswordMsg(data.message || '修改密码失败', 'error');
+                            }
+                        })
+                        .catch(error => {
+                            submitChangePasswordBtn.disabled = false;
+                            showPasswordMsg('请求发生错误，请稍后重试', 'error');
+                            console.error('修改密码错误:', error);
+                        });
+                    });
+
+                    // 在确认框回车直接提交
+                    [currentPasswordInput, newPasswordInput, confirmNewPasswordInput].forEach(function(input) {
+                        if (!input) return;
+                        input.addEventListener('keypress', function(e) {
+                            if (e.key === 'Enter') {
+                                e.preventDefault();
+                                submitChangePasswordBtn.click();
+                            }
+                        });
                     });
                 }
 
