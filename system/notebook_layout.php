@@ -366,6 +366,54 @@
 
         .password-form-msg.error { color: #ef4444; }
         .password-form-msg.success { color: var(--success); }
+
+        /* 设置面板保存中遮罩 */
+        .settings-overlay {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 20;
+            border-radius: 12px;
+            background: rgba(18, 20, 31, 0.75);
+            backdrop-filter: blur(3px);
+            -webkit-backdrop-filter: blur(3px);
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            cursor: wait;
+        }
+
+        .settings-overlay.show {
+            display: flex;
+        }
+
+        /* 保存中锁住滚动，保证遮罩始终铺满可视区域 */
+        .settings-content.is-saving {
+            overflow: hidden;
+        }
+
+        .settings-spinner {
+            width: 26px;
+            height: 26px;
+            border: 2.5px solid rgba(255, 255, 255, 0.15);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: settings-spin 0.8s linear infinite;
+        }
+
+        @keyframes settings-spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .settings-overlay-text {
+            font-size: 0.85em;
+            color: var(--light);
+            font-weight: 500;
+        }
             color: white;
             font-size: 12px;
             top: 50%;
@@ -751,6 +799,10 @@
                                 <i class="fas fa-cog"></i> 设置
                             </button>
                             <div id="settings-menu" class="settings-content">
+                                <div id="settings-overlay" class="settings-overlay">
+                                    <div class="settings-spinner"></div>
+                                    <span class="settings-overlay-text">正在保存设置…</span>
+                                </div>
                                 <div class="settings-item">
                                     <label>
                                         <span class="switch">
@@ -911,9 +963,56 @@
             // 设置菜单功能
             const settingsButton = document.getElementById('settings-button');
             const settingsMenu = document.getElementById('settings-menu');
+            const settingsOverlay = document.getElementById('settings-overlay');
             const saveSettingsButton = document.getElementById('save-settings');
             const alwaysRequirePasswordCheckbox = document.getElementById('always-require-password');
             const publicToggleCheckbox = document.getElementById('public-toggle');
+            const archiveCodeInput = document.getElementById('archive-code');
+
+            // 记录设置项的初始值，用于计算增量（只提交真正改动过的项）
+            const initialSettings = {
+                alwaysRequirePassword: alwaysRequirePasswordCheckbox ? alwaysRequirePasswordCheckbox.checked : false,
+                isPublic: publicToggleCheckbox ? publicToggleCheckbox.checked : false,
+                archiveCode: archiveCodeInput ? archiveCodeInput.value.trim() : ''
+            };
+
+            // 保存中标记，配合遮罩防止重复提交
+            let isSavingSettings = false;
+
+            function setSettingsSaving(saving) {
+                isSavingSettings = saving;
+                if (settingsOverlay) settingsOverlay.classList.toggle('show', saving);
+                if (settingsMenu) settingsMenu.classList.toggle('is-saving', saving);
+                if (saveSettingsButton) saveSettingsButton.disabled = saving;
+            }
+
+            // 统一的表单请求封装
+            function postSettings(body) {
+                return fetch(window.APP_BASE + 'system/api.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: body
+                }).then(response => response.json());
+            }
+
+            // 在设置菜单底部展示一条状态提示
+            function showSettingsMessage(text, isError) {
+                const existingStatus = settingsMenu.querySelector('.save-success');
+                if (existingStatus) {
+                    existingStatus.remove();
+                }
+
+                const statusEl = document.createElement('div');
+                statusEl.className = 'save-success';
+                statusEl.textContent = text;
+                statusEl.style.color = isError ? '#ef4444' : 'var(--success)';
+                statusEl.style.marginTop = '10px';
+                settingsMenu.appendChild(statusEl);
+
+                return statusEl;
+            }
             
             if (settingsButton && settingsMenu) {
                 // 点击设置按钮显示/隐藏设置菜单
@@ -946,8 +1045,36 @@
                     settingsMenu.classList.toggle('show');
                 });
                 
-                // 点击页面其他地方关闭设置菜单
+                // 面板内部的点击一律不冒泡到 document，
+                // 避免按钮 disabled、图标节点变动等情况下 contains() 判断失效导致面板被误关
+                settingsMenu.addEventListener('click', function(event) {
+                    event.stopPropagation();
+                });
+
+                // 记录鼠标按下的起点是否在面板内。
+                // 在面板内按下、拖到面板外松开（例如全选文本）时，click 会在共同祖先上派发，
+                // 此时 event.target 位于面板外，仅凭 target 判断会误关面板。
+                let pointerDownInsideMenu = false;
+                document.addEventListener('mousedown', function(event) {
+                    pointerDownInsideMenu = settingsMenu.contains(event.target) ||
+                        (settingsButton && settingsButton.contains(event.target));
+                });
+                document.addEventListener('touchstart', function(event) {
+                    const target = event.target;
+                    pointerDownInsideMenu = settingsMenu.contains(target) ||
+                        (settingsButton && settingsButton.contains(target));
+                }, { passive: true });
+
+                // 点击页面其他地方关闭设置菜单（保存中不关闭）
                 document.addEventListener('click', function(event) {
+                    if (isSavingSettings) return;
+
+                    // 起点在面板内（拖拽选择文本）时不关闭，并重置标记
+                    if (pointerDownInsideMenu) {
+                        pointerDownInsideMenu = false;
+                        return;
+                    }
+
                     if (!event.target.matches('.settings-btn') && !settingsMenu.contains(event.target)) {
                         settingsMenu.classList.remove('show');
                     }
@@ -1075,15 +1202,23 @@
                             method: 'POST',
                             body: formData
                         })
-                        .then(response => response.json())
-                        .then(data => {
+                        .then(response => response.text())
+                        .then(text => {
+                            // 服务端异常时可能返回 HTML，避免 json 解析抛错吞掉真实原因
+                            let data;
+                            try {
+                                data = JSON.parse(text);
+                            } catch (e) {
+                                console.error('修改密码接口返回非 JSON:', text);
+                                throw new Error('服务器返回异常');
+                            }
+
                             submitChangePasswordBtn.disabled = false;
                             if (data.success) {
                                 showPasswordMsg('密码修改成功', 'success');
                                 setTimeout(() => {
                                     resetPasswordForm();
                                     passwordForm.classList.remove('show');
-                                    settingsMenu.classList.remove('show');
                                 }, 1500);
                             } else {
                                 showPasswordMsg(data.message || '修改密码失败', 'error');
@@ -1091,7 +1226,7 @@
                         })
                         .catch(error => {
                             submitChangePasswordBtn.disabled = false;
-                            showPasswordMsg('请求发生错误，请稍后重试', 'error');
+                            showPasswordMsg(error.message || '请求发生错误，请稍后重试', 'error');
                             console.error('修改密码错误:', error);
                         });
                     });
@@ -1110,92 +1245,123 @@
 
                 if (saveSettingsButton) {
                     saveSettingsButton.addEventListener('click', function() {
+                        // 保存中则直接忽略后续点击
+                        if (isSavingSettings) return;
+
                         const alwaysRequirePassword = alwaysRequirePasswordCheckbox.checked;
                         const isPublic = publicToggleCheckbox.checked;
-                        const archiveCode = document.getElementById('archive-code').value.trim();
-                        
-                        // 保存所有设置
-                        Promise.all([
-                            // 保存密码设置
-                            fetch(window.APP_BASE + 'system/api.php', {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/x-www-form-urlencoded',
-                                },
-                                body: 'action=update_settings&id=' + noteId + '&always_require_password=' + (alwaysRequirePassword ? '1' : '0')
-                            }),
-                            // 保存公开设置
-                            fetch(window.APP_BASE + 'system/api.php', {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/x-www-form-urlencoded',
-                                },
-                                body: 'action=update_public&id=' + noteId + '&ispublic=' + (isPublic ? '1' : '0')
-                            }),
-                            // 先检查归档码是否存在
-                            fetch(window.APP_BASE + 'system/api.php', {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/x-www-form-urlencoded',
-                                },
-                                body: 'action=check_archive_code&id=' + noteId + '&archive_code=' + encodeURIComponent(archiveCode)
-                            }).then(response => response.json())
-                            .then(data => {
-                                if (data.exists) {
-                                    return new Promise((resolve, reject) => {
-                                        if (confirm('该归档码已存在，确定要归档到该处吗？')) {
-                                            // 用户确认后再设置归档码
-                                            fetch(window.APP_BASE + 'system/api.php', {
-                                                method: 'POST',
-                                                headers: {
-                                                    'Content-Type': 'application/x-www-form-urlencoded',
-                                                },
-                                                body: 'action=set_archive_code&id=' + noteId + '&archive_code=' + encodeURIComponent(archiveCode)
-                                            }).then(resolve).catch(reject);
-                                        } else {
-                                            reject(new Error('用户取消设置归档码'));
+                        const archiveCode = archiveCodeInput ? archiveCodeInput.value.trim() : '';
+
+                        // 逐项比对初始值，只收集真正被修改过的设置
+                        const tasks = [];
+
+                        if (alwaysRequirePassword !== initialSettings.alwaysRequirePassword) {
+                            tasks.push({
+                                key: 'alwaysRequirePassword',
+                                value: alwaysRequirePassword,
+                                run: () => postSettings(
+                                    'action=update_settings&id=' + encodeURIComponent(noteId) +
+                                    '&always_require_password=' + (alwaysRequirePassword ? '1' : '0')
+                                )
+                            });
+                        }
+
+                        if (isPublic !== initialSettings.isPublic) {
+                            tasks.push({
+                                key: 'isPublic',
+                                value: isPublic,
+                                run: () => postSettings(
+                                    'action=update_public&id=' + encodeURIComponent(noteId) +
+                                    '&ispublic=' + (isPublic ? '1' : '0')
+                                )
+                            });
+                        }
+
+                        if (archiveCode !== initialSettings.archiveCode) {
+                            tasks.push({
+                                key: 'archiveCode',
+                                value: archiveCode,
+                                run: () => {
+                                    // 归档码被清空时后端不接受空值，跳过请求并保持原值
+                                    if (archiveCode === '') {
+                                        return Promise.resolve({ success: true, skipped: true });
+                                    }
+
+                                    // 先检查归档码是否已被其他笔记本使用
+                                    return postSettings(
+                                        'action=check_archive_code&id=' + encodeURIComponent(noteId) +
+                                        '&archive_code=' + encodeURIComponent(archiveCode)
+                                    ).then(data => {
+                                        if (data.exists && !confirm('该归档码已存在，确定要归档到该处吗？')) {
+                                            return { success: true, cancelled: true };
                                         }
-                                    });
-                                } else {
-                                    // 归档码不存在，直接设置
-                                    return fetch(window.APP_BASE + 'system/api.php', {
-                                        method: 'POST',
-                                        headers: {
-                                            'Content-Type': 'application/x-www-form-urlencoded',
-                                        },
-                                        body: 'action=set_archive_code&id=' + noteId + '&archive_code=' + encodeURIComponent(archiveCode)
+                                        return postSettings(
+                                            'action=set_archive_code&id=' + encodeURIComponent(noteId) +
+                                            '&archive_code=' + encodeURIComponent(archiveCode)
+                                        );
                                     });
                                 }
-                            })
-                        ])
-                        .then(responses => Promise.all(responses.map(r => r.json())))
-                        .then(results => {
-                            if (results.every(r => r.success)) {
-                                const saveStatus = document.createElement('div');
-                                saveStatus.textContent = '设置已保存';
-                                saveStatus.style.color = 'var(--success)';
-                                saveStatus.style.marginTop = '10px';
-                                
-                                const existingStatus = settingsMenu.querySelector('.save-success');
-                                if (existingStatus) {
-                                    existingStatus.remove();
+                            });
+                        }
+
+                        // 没有任何改动，不发请求
+                        if (tasks.length === 0) {
+                            const statusEl = showSettingsMessage('设置没有变化', false);
+                            statusEl.style.color = 'var(--gray)';
+                            setTimeout(() => { statusEl.remove(); }, 1500);
+                            return;
+                        }
+
+                        setSettingsSaving(true);
+
+                        Promise.all(tasks.map(task => task.run()))
+                            .then(results => {
+                                const failed = results.find(r => !r || !r.success);
+
+                                if (failed) {
+                                    const statusEl = showSettingsMessage(
+                                        '保存失败：' + (failed.message || '未知错误'), true
+                                    );
+                                    setTimeout(() => { statusEl.remove(); }, 2500);
+                                    return;
                                 }
-                                
-                                saveStatus.className = 'save-success';
-                                settingsMenu.appendChild(saveStatus);
-                                
+
+                                // 保存成功，把初始值刷新为当前值，避免重复提交同样的改动
+                                let appliedCount = 0;
+                                results.forEach((result, index) => {
+                                    if (result.cancelled) return;
+                                    if (!result.skipped) {
+                                        appliedCount++;
+                                    }
+                                    initialSettings[tasks[index].key] = tasks[index].value;
+                                });
+
+                                // 归档码被清空的情况，输入框回填原值
+                                if (archiveCodeInput && initialSettings.archiveCode !== archiveCodeInput.value.trim()) {
+                                    archiveCodeInput.value = initialSettings.archiveCode;
+                                }
+
+                                // 同步公开链接按钮的可用状态
+                                if (copyPublicLinkButton) {
+                                    copyPublicLinkButton.disabled = !initialSettings.isPublic;
+                                }
+
+                                const statusEl = showSettingsMessage(
+                                    appliedCount > 0 ? '设置已保存' : '没有需要保存的更改', false
+                                );
+
                                 setTimeout(() => {
-                                    saveStatus.remove();
-                                    settingsMenu.classList.remove('show');
+                                    statusEl.remove();
                                 }, 1500);
-                            } else {
-                                alert('保存设置失败: ' + (results.find(r => !r.success)?.message || '未知错误'));
-                            }
-                        })
-                        .catch(error => {
-                            alert('保存设置时发生错误');
-                            console.error(error);
-                        });
+                            })
+                            .catch(error => {
+                                const statusEl = showSettingsMessage('保存设置时发生错误', true);
+                                setTimeout(() => { statusEl.remove(); }, 2500);
+                                console.error(error);
+                            })
+                            .finally(() => {
+                                setSettingsSaving(false);
+                            });
                     });
                 }
             }
