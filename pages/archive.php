@@ -12,8 +12,10 @@ $has_searched = false;
 
 // 分页设置
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+if ($page < 1) { $page = 1; }
 $per_page = 10; // 每页显示10条记录
 $total_notebooks = 0;
+$offset = ($page - 1) * $per_page;
 
 // 处理归档码查询
 if (isset($_GET['archive_code']) && !empty($_GET['archive_code'])) {
@@ -43,45 +45,55 @@ $total_pages = ceil($total_notebooks / $per_page);
     <title>云笔记 - 归档码查询</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        /* 隐藏所有滚动条 */
+        ::-webkit-scrollbar {
+            width: 0 !important;
+            height: 0 !important;
+            display: none !important;
+        }
+        * {
+            scrollbar-width: none !important;
+            -ms-overflow-style: none !important;
+        }
+
         :root {
-            --triangle-left: 20px;
-            --triangle-right: auto;
             --primary: #4a6bfa;
             --primary-dark: #3a56d4;
-            --primary-light: rgba(74, 107, 250, 0.1);
             --secondary: #6c63ff;
-            --dark: #1a1e2e;
-            --darker: #151824;
+            --accent: #22d3ee;
+            --dark: #12141f;
+            --darker: #171a29;
+            --card-bg: rgba(255, 255, 255, 0.04);
+            --card-border: rgba(255, 255, 255, 0.08);
             --light: #f0f2f5;
-            --gray: #6e7888;
+            --gray: #8b93a7;
             --success: #10b981;
             --danger: #ef4444;
-            --border-radius: 12px;
-            --card-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-            --card-shadow-hover: 0 15px 50px rgba(0, 0, 0, 0.2);
-            --transition: all 0.3s ease;
+            --border-radius: 16px;
+            --card-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
+            --card-shadow-hover: 0 20px 60px rgba(74, 107, 250, 0.25);
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        
-        body {
-            background: var(--dark);
-            color: var(--light);
-            font-family: "SF Pro Display", "SF Pro Icons", "Helvetica Neue", "Microsoft YaHei", "Segoe UI", sans-serif;
-            line-height: 1.6;
+
+        * {
             margin: 0;
             padding: 0;
+            box-sizing: border-box;
+        }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: "SF Pro Display", "SF Pro Icons", "Helvetica Neue", "Microsoft YaHei", "Segoe UI", sans-serif;
+            background-color: var(--dark);
+            color: var(--light);
+            line-height: 1.6;
             min-height: 100vh;
-        }
-
-        .container {
-            max-width: 80% !important;
-            margin: 0 auto;
-            padding: 30px 20px;
+            overflow-x: hidden;
             position: relative;
-            height: auto;
-            min-height: calc(100vh - 60px);
         }
 
-        /* 背景动画 */
+        /* ===== 背景光晕 ===== */
         .background {
             position: fixed;
             top: 0;
@@ -94,8 +106,8 @@ $total_pages = ceil($total_notebooks / $per_page);
 
         .shape {
             position: absolute;
-            opacity: 0.1;
-            filter: blur(60px);
+            opacity: 0.12;
+            filter: blur(70px);
             transform: translateZ(0);
         }
 
@@ -119,18 +131,41 @@ $total_pages = ceil($total_notebooks / $per_page);
             animation: float 12s ease-in-out infinite alternate-reverse;
         }
 
+        .shape-3 {
+            background: var(--accent);
+            width: 340px;
+            height: 340px;
+            top: 42%;
+            left: 46%;
+            opacity: 0.06;
+            border-radius: 50%;
+            animation: float 14s ease-in-out infinite alternate;
+        }
+
         @keyframes float {
             0% { transform: translate(0, 0) rotate(0deg); }
             100% { transform: translate(30px, 50px) rotate(10deg); }
         }
 
-        /* 导航栏样式 */
+        .container {
+            max-width: 900px !important;
+            width: 100%;
+            margin: 0 auto;
+            padding: 30px 24px 60px;
+            position: relative;
+            min-height: 100vh;
+        }
+
+        /* ===== 顶部导航 ===== */
         .header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 40px;
-            position: relative;
+            gap: 16px;
+            flex-wrap: wrap;
+            margin-bottom: 46px;
+            padding-bottom: 18px;
+            border-bottom: 1px solid var(--card-border);
         }
 
         .logo {
@@ -141,6 +176,8 @@ $total_pages = ceil($total_notebooks / $per_page);
             font-weight: 700;
             color: white;
             text-decoration: none;
+            width: auto;
+            flex-shrink: 0;
         }
 
         .logo i {
@@ -162,42 +199,21 @@ $total_pages = ceil($total_notebooks / $per_page);
             color: transparent;
         }
 
-        .notebook-title {
-            color: var(--light);
-            font-size: 1.25rem;
-            font-weight: 500;
-            margin: 0;
-            position: relative;
-            padding-left: 1.5rem;
-        }
-
-        .notebook-title:before {
-            content: '';
-            position: absolute;
-            left: 0;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 2px;
-            height: 1rem;
-            background: var(--primary);
-            border-radius: 2px;
-        }
-
-        .nav-links {
+        .top-nav {
             display: flex;
-            gap: 20px;
+            gap: 10px;
+            align-items: center;
         }
 
         .nav-link {
             color: var(--gray);
-            background: none;
-            box-shadow: none;
             text-decoration: none;
             font-weight: 600;
-            font-size: 1.1em;
+            font-size: 1em;
             transition: var(--transition);
-            padding: 8px 15px;
-            border-radius: 8px;
+            padding: 9px 16px;
+            border-radius: 10px;
+            border: 1px solid var(--card-border);
             display: inline-flex;
             align-items: center;
             gap: 8px;
@@ -205,257 +221,474 @@ $total_pages = ceil($total_notebooks / $per_page);
 
         .nav-link:hover {
             color: white;
-            background-color: rgba(255, 255, 255, 0.1);
-            transform: none;
-            box-shadow: none;
+            background: rgba(74, 107, 250, 0.15);
+            border-color: rgba(74, 107, 250, 0.4);
         }
 
-        .nav-link i {
-            font-size: 1em;
+        /* ===== 页面标题区 ===== */
+        .page-head {
+            text-align: center;
+            margin-bottom: 32px;
         }
 
+        .page-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 7px 16px;
+            border-radius: 100px;
+            background: rgba(74, 107, 250, 0.12);
+            border: 1px solid rgba(74, 107, 250, 0.3);
+            color: #a5b4fc;
+            font-size: 0.88em;
+            font-weight: 600;
+            margin-bottom: 18px;
+        }
+
+        .page-badge i { color: var(--accent); }
+
+        .page-title {
+            font-size: 2.4em;
+            font-weight: 800;
+            line-height: 1.2;
+            background: linear-gradient(90deg, #ffffff, #a5b4fc);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .page-subtitle {
+            color: var(--gray);
+            font-size: 1.02em;
+            margin: 12px auto 0;
+            max-width: 560px;
+        }
+
+        /* ===== 玻璃拟态查询卡片 ===== */
         .archive-card {
-            background: var(--darker);
-            border-radius: var(--border-radius);
+            position: relative;
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 34px;
             box-shadow: var(--card-shadow);
-            padding: 2rem;
-            margin: 2rem auto;
             transition: var(--transition);
-            max-width: 800px;
+            overflow: hidden;
+        }
+
+        .archive-card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 20px;
+            padding: 1px;
+            background: linear-gradient(135deg, rgba(74, 107, 250, 0.5), transparent 40%, transparent 60%, rgba(108, 99, 255, 0.4));
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            pointer-events: none;
         }
 
         .archive-card:hover {
             box-shadow: var(--card-shadow-hover);
         }
 
-        .archive-title {
-            display: none;
+        .panel-hint {
+            font-size: 0.9em;
+            color: var(--gray);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            line-height: 1.5;
         }
+        .panel-hint i { color: var(--accent); margin-top: 4px; }
 
         .archive-form {
             display: flex;
-            gap: 1rem;
+            gap: 12px;
+            align-items: stretch;
+        }
+
+        .input-wrap {
+            position: relative;
+            flex: 1;
+        }
+
+        .input-wrap > i {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--gray);
+            pointer-events: none;
         }
 
         .archive-input {
-            flex: 1;
-            padding: 0.75rem 1rem;
+            width: 100%;
+            padding: 15px 15px 15px 44px;
             border: 2px solid rgba(255, 255, 255, 0.1);
-            border-radius: var(--border-radius);
-            font-size: 1rem;
+            border-radius: 12px;
+            font-size: 1em;
             outline: none;
-            background: var(--dark);
-            color: var(--light);
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
             transition: var(--transition);
         }
 
+        .archive-input::placeholder { color: rgba(255, 255, 255, 0.3); }
+
         .archive-input:focus {
             border-color: var(--primary);
-            background: rgba(255, 255, 255, 0.05);
+            box-shadow: 0 0 0 3px rgba(74, 107, 250, 0.25);
+            background: rgba(255, 255, 255, 0.08);
         }
 
         .archive-button {
-            background: var(--primary);
-            color: var(--light);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 9px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            color: white;
             border: none;
-            border-radius: var(--border-radius);
-            padding: 0.75rem 1.5rem;
-            font-weight: 500;
+            border-radius: 12px;
+            padding: 15px 26px;
+            font-size: 1.02em;
+            font-weight: 600;
             cursor: pointer;
+            white-space: nowrap;
             transition: var(--transition);
         }
 
         .archive-button:hover {
-            background: var(--primary-dark);
             transform: translateY(-2px);
+            box-shadow: 0 10px 26px rgba(74, 107, 250, 0.4);
+        }
+
+        /* ===== 结果区标题 ===== */
+        .result-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+
+        .result-title {
+            font-size: 1.15em;
+            font-weight: 700;
+            color: white;
+            display: inline-flex;
+            align-items: center;
+            gap: 9px;
+        }
+        .result-title i { color: var(--primary); }
+
+        .result-count {
+            font-size: 0.86em;
+            color: #a5b4fc;
+            background: rgba(74, 107, 250, 0.12);
+            border: 1px solid rgba(74, 107, 250, 0.3);
+            padding: 5px 13px;
+            border-radius: 100px;
+            font-weight: 600;
+        }
+
+        /* ===== 笔记本卡片 ===== */
+        .notebook-list {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
         }
 
         .notebook-card {
+            position: relative;
             display: block;
             text-decoration: none;
-            background: var(--darker);
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--card-border);
             border-radius: var(--border-radius);
-            padding: 1.25rem;
-            margin-bottom: 1rem;
-            box-shadow: var(--card-shadow);
+            padding: 20px 22px;
             transition: var(--transition);
-            border: 1px solid rgba(255, 255, 255, 0.05);
+            overflow: hidden;
+        }
+
+        .notebook-card::after {
+            content: '\f054'; /* fa-chevron-right */
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            position: absolute;
+            right: 22px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--gray);
+            font-size: 0.85em;
+            opacity: 0;
+            transition: var(--transition);
         }
 
         .notebook-card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(74, 107, 250, 0.45);
+            background: rgba(74, 107, 250, 0.07);
             box-shadow: var(--card-shadow-hover);
-            transform: translateY(-2px);
-            border-color: var(--primary);
-            background: rgba(74, 107, 250, 0.05);
         }
 
-        .admin-title {
-            font-size: 1.8em;
-            font-weight: 800;
-            text-align: center;
-            background: linear-gradient(90deg, white, #a5b4fc);
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-            white-space: nowrap;
+        .notebook-card:hover::after {
+            opacity: 1;
+            right: 16px;
+            color: var(--accent);
         }
 
         .notebook-header {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            margin-bottom: 1rem;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 14px;
         }
 
         .notebook-id {
-            font-size: 1.125rem;
-            font-weight: 600;
+            font-size: 1.1em;
+            font-weight: 700;
             color: var(--light);
             display: flex;
             align-items: center;
-            gap: 0.5rem;
+            gap: 10px;
+            min-width: 0;
+            overflow-wrap: anywhere;
         }
 
         .notebook-id i {
+            width: 34px;
+            height: 34px;
+            flex-shrink: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            font-size: 0.85em;
             color: var(--primary);
+            background: linear-gradient(135deg, rgba(74, 107, 250, 0.2), rgba(108, 99, 255, 0.2));
         }
 
         .notebook-code {
-            font-size: 0.875rem;
-            color: var(--gray);
-            display: flex;
+            font-size: 0.82em;
+            color: #a5b4fc;
+            display: inline-flex;
             align-items: center;
-            gap: 0.5rem;
-            background: var(--dark);
-            padding: 0.375rem 0.75rem;
-            border-radius: 6px;
+            gap: 7px;
+            background: rgba(74, 107, 250, 0.12);
+            border: 1px solid rgba(74, 107, 250, 0.3);
+            padding: 5px 13px;
+            border-radius: 100px;
+            font-weight: 600;
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
 
         .notebook-meta {
             color: var(--gray);
-            font-size: 0.875rem;
+            font-size: 0.88em;
             display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
+            flex-wrap: wrap;
+            gap: 10px 26px;
+            padding-top: 12px;
+            border-top: 1px solid var(--card-border);
         }
 
         .meta-item {
             display: flex;
             align-items: center;
-            gap: 0.5rem;
+            gap: 8px;
         }
 
         .meta-item i {
             color: var(--primary);
-            opacity: 0.8;
+            opacity: 0.85;
+            font-size: 0.95em;
         }
 
+        /* ===== 空状态 ===== */
         .empty-message {
             text-align: center;
-            padding: 2rem;
-            background: var(--darker);
-            border-radius: var(--border-radius);
+            padding: 56px 26px;
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-radius: 20px;
             color: var(--gray);
-            border: 2px dashed rgba(255, 255, 255, 0.1);
+            border: 1px dashed rgba(255, 255, 255, 0.12);
         }
 
+        .empty-icon {
+            width: 74px;
+            height: 74px;
+            line-height: 74px;
+            margin: 0 auto 20px;
+            border-radius: 20px;
+            font-size: 1.7em;
+            color: var(--primary);
+            background: linear-gradient(135deg, rgba(74, 107, 250, 0.18), rgba(108, 99, 255, 0.18));
+        }
+
+        .empty-title {
+            font-size: 1.2em;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 8px;
+        }
+
+        .empty-text { font-size: 0.94em; }
+
+        /* ===== 错误提示 ===== */
         .message {
             background: rgba(239, 68, 68, 0.1);
-            color: var(--danger);
-            padding: 1rem;
-            border-radius: var(--border-radius);
-            margin-bottom: 1rem;
+            color: #fca5a5;
+            padding: 14px 18px;
+            border-radius: 12px;
+            margin-bottom: 20px;
             display: flex;
             align-items: center;
-            gap: 0.5rem;
-            border: 1px solid rgba(239, 68, 68, 0.2);
+            gap: 10px;
+            border: 1px solid rgba(239, 68, 68, 0.25);
+            font-size: 0.95em;
         }
 
-        /* 分页样式 */
+        /* ===== 分页 ===== */
         .pagination {
             display: flex;
+            flex-wrap: wrap;
             justify-content: center;
-            margin-top: 30px;
-            gap: 5px;
+            margin-top: 32px;
+            gap: 8px;
         }
 
         .pagination a, .pagination span {
+            flex: 0 0 auto;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            min-width: 35px;
-            height: 35px;
-            padding: 0 10px;
-            border-radius: var(--border-radius);
-            background-color: var(--darker);
+            min-width: 38px;
+            height: 38px;
+            padding: 0 12px;
+            border-radius: 11px;
+            background: var(--card-bg);
             color: var(--light);
             text-decoration: none;
             transition: var(--transition);
-            font-size: 0.9em;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 0.92em;
+            font-weight: 600;
+            border: 1px solid var(--card-border);
         }
 
         .pagination a:hover {
-            background-color: var(--primary);
-            border-color: var(--primary);
+            background: rgba(74, 107, 250, 0.15);
+            border-color: rgba(74, 107, 250, 0.45);
             transform: translateY(-2px);
         }
 
         .pagination .current {
-            background-color: var(--primary);
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
             color: white;
-            border-color: var(--primary);
+            border-color: transparent;
+            box-shadow: 0 6px 18px rgba(74, 107, 250, 0.35);
         }
-        
+
         .pagination .disabled {
-            opacity: 0.5;
+            opacity: 0.35;
             cursor: not-allowed;
-            background-color: rgba(255, 255, 255, 0.05);
         }
 
         .record-info {
-            font-size: 0.9em;
-            opacity: 0.8;
+            font-size: 0.88em;
+            color: var(--gray);
+            text-align: center;
+            margin-top: 16px;
         }
 
-        @media (max-width: 640px) {
+        /* ===== 页脚 ===== */
+        .footer {
+            text-align: center;
+            margin-top: 60px;
+            padding-top: 26px;
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .footer-text {
+            color: var(--gray);
+            font-size: 0.88em;
+        }
+
+        /* ===== 响应式 ===== */
+        @media (max-width: 768px) {
             .container {
                 max-width: 100% !important;
-                padding: 20px 16px;
+                padding: 22px 16px 46px;
                 padding-left: max(16px, env(safe-area-inset-left));
                 padding-right: max(16px, env(safe-area-inset-right));
             }
 
-            .archive-form {
+            .header {
                 flex-direction: column;
-            }
-            
-            .archive-button {
-                width: 100%;
-            }
-
-            .notebook-header {
-                flex-wrap: wrap;
-                gap: 0.5rem;
+                align-items: center;
+                gap: 16px;
+                margin-bottom: 32px;
             }
 
-            .pagination {
-                flex-wrap: wrap;
-            }
+            .logo { width: auto !important; justify-content: center; }
+            .top-nav { flex-wrap: wrap; justify-content: center; }
 
+            .page-title { font-size: 1.9em; }
+
+            .archive-card { padding: 24px 20px; }
+
+            .archive-form { flex-direction: column; }
+            .archive-button { width: 100%; }
+
+            .notebook-card::after { display: none; }
+        }
+
+        @media (max-width: 480px) {
+            .container { padding: 18px 14px 40px; }
+            .logo { font-size: 1.5em; }
+            .logo i { width: 36px; height: 36px; }
+            .nav-link { font-size: 0.9em; padding: 8px 12px; }
+            .page-badge { font-size: 0.8em; padding: 6px 12px; }
+            .page-title { font-size: 1.6em; }
+            .page-subtitle { font-size: 0.95em; }
+            .archive-card { padding: 20px 16px; border-radius: 16px; }
+            .archive-card::before { border-radius: 16px; }
+            .archive-input { padding: 14px 14px 14px 42px; font-size: 0.98em; }
+            .notebook-card { padding: 18px 16px; }
+            .notebook-header { gap: 8px; }
+            .notebook-id { font-size: 1em; }
+            .notebook-meta { gap: 8px 18px; font-size: 0.84em; }
             .pagination a, .pagination span {
-                min-width: 30px;
-                height: 30px;
+                min-width: 33px;
+                height: 33px;
+                padding: 0 9px;
                 font-size: 0.85em;
             }
         }
     </style>
 </head>
 <body>
-    <!-- 背景动画 -->
+    <!-- 背景光晕 -->
     <div class="background">
         <div class="shape shape-1"></div>
         <div class="shape shape-2"></div>
+        <div class="shape shape-3"></div>
     </div>
 
     <div class="container">
@@ -464,27 +697,42 @@ $total_pages = ceil($total_notebooks / $per_page);
                 <i class="fas fa-book"></i>
                 <span>云笔记</span>
             </a>
-            <div class="top-nav">
+            <nav class="top-nav">
                 <a href="<?php echo APP_BASE; ?>index.php" class="nav-link">
-                    <i class="fas fa-home"></i> 返回首页
+                    <i class="fas fa-house"></i> 返回首页
                 </a>
-            </div>
+                <a href="<?php echo APP_BASE; ?>pages/admin.php" class="nav-link">
+                    <i class="fas fa-user-shield"></i> 管理员入口
+                </a>
+            </nav>
         </header>
-        
-        <div class="admin-title" style="margin-bottom: 30px;">
-            归档码查询
+
+        <div class="page-head">
+            <div class="page-badge">
+                <i class="fas fa-key"></i> 凭一个归档码，找回整组笔记本
+            </div>
+            <h1 class="page-title">归档码查询</h1>
+            <p class="page-subtitle">归档码是笔记本的「分组标签」，输入归档码即可列出该组下的所有笔记本。</p>
         </div>
 
         <div class="archive-card">
-            <div class="archive-title">归档码查询</div>
+            <p class="panel-hint">
+                <i class="fas fa-circle-info"></i>
+                在笔记本的「设置」中可为其填写归档码；多个笔记本使用同一归档码即视为一组。
+            </p>
             <form method="get" class="archive-form">
-                <input type="text" 
-                       name="archive_code" 
-                       class="archive-input" 
-                       placeholder="请输入笔记本的归档码" 
-                       value="<?php echo isset($_GET['archive_code']) ? htmlspecialchars($_GET['archive_code']) : ''; ?>" 
-                       required>
-                <button type="submit" class="archive-button">查找笔记本</button>
+                <div class="input-wrap">
+                    <i class="fas fa-key"></i>
+                    <input type="text"
+                           name="archive_code"
+                           class="archive-input"
+                           placeholder="请输入笔记本的归档码"
+                           value="<?php echo isset($_GET['archive_code']) ? htmlspecialchars($_GET['archive_code']) : ''; ?>"
+                           required>
+                </div>
+                <button type="submit" class="archive-button">
+                    <i class="fas fa-magnifying-glass"></i> 查找笔记本
+                </button>
             </form>
         </div>
 
@@ -497,6 +745,14 @@ $total_pages = ceil($total_notebooks / $per_page);
 
         <?php if ($has_searched): ?>
             <?php if (!empty($notebooks)): ?>
+                <div class="result-head">
+                    <div class="result-title">
+                        <i class="fas fa-folder-open"></i> 查询结果
+                    </div>
+                    <div class="result-count">共 <?php echo $total_notebooks; ?> 个笔记本</div>
+                </div>
+
+                <div class="notebook-list">
                 <?php foreach ($notebooks as $notebook): ?>
                     <a href="<?php echo APP_BASE; ?>pages/notebook.php?id=<?php echo urlencode($notebook['id']); ?>" class="notebook-card">
                         <div class="notebook-header">
@@ -521,6 +777,7 @@ $total_pages = ceil($total_notebooks / $per_page);
                         </div>
                     </a>
                 <?php endforeach; ?>
+                </div>
 
                 <!-- 分页导航 -->
                 <?php if ($total_pages > 1): ?>
@@ -566,7 +823,7 @@ $total_pages = ceil($total_notebooks / $per_page);
                     </div>
                     
                     <!-- 记录信息 -->
-                    <div class="record-info" style="text-align: center; margin-top: 15px; color: var(--gray);">
+                    <div class="record-info">
                         显示 <?php echo $total_notebooks; ?> 条记录中的 
                         <?php echo ($offset + 1); ?> 到 
                         <?php echo min($offset + $per_page, $total_notebooks); ?> 条
@@ -574,10 +831,38 @@ $total_pages = ceil($total_notebooks / $per_page);
                 <?php endif; ?>
             <?php else: ?>
                 <div class="empty-message">
-                    未找到使用该归档码的笔记本
+                    <div class="empty-icon"><i class="fas fa-folder-open"></i></div>
+                    <div class="empty-title">未找到相关笔记本</div>
+                    <p class="empty-text">没有使用该归档码的笔记本，请确认归档码是否正确。</p>
                 </div>
             <?php endif; ?>
         <?php endif; ?>
+
+        <footer class="footer">
+            <p class="footer-text">© <?php echo date('Y'); ?> 云笔记 - 安全、简洁、高效的在线记事工具 - By欲儿</p>
+        </footer>
     </div>
+
+    <script>
+        // 渐入动画
+        document.addEventListener('DOMContentLoaded', function () {
+            var elements = document.querySelectorAll('.header, .page-head, .archive-card, .result-head, .notebook-card, .empty-message, .pagination');
+            elements.forEach(function (el, index) {
+                el.style.opacity = '0';
+                el.style.transform = 'translateY(18px)';
+                el.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+                setTimeout(function () {
+                    el.style.opacity = '1';
+                    el.style.transform = 'translateY(0)';
+                }, 70 * index);
+            });
+
+            // 自动聚焦查询框（无查询结果时）
+            var input = document.querySelector('.archive-input');
+            if (input && !input.value) {
+                input.focus();
+            }
+        });
+    </script>
 </body>
 </html>
